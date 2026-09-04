@@ -1,574 +1,578 @@
 /* ============================================================
-   EMPANADAS QUE RICO — DESDE CERO
-   Flujo: sucursal -> menú -> carrito -> entrega -> pago
-   -> RPC Supabase -> WhatsApp -> seguimiento
+   EMPANADAS QUE RICO
+   Script principal — versión ordenada
    ============================================================ */
 
+/* =========================
+   1. CONFIGURACIÓN
+   ========================= */
 const CONFIG = {
   cajaPorPedido: 2500,
+
+  // REEMPLAZA estos números por los WhatsApp reales.
   whatsapp: {
-    Centro: "573000000001",
-    Cuba: "573148978258",
-    Circunvalar: "573024932188"
+    punto1: "573000000001",
+    punto2: "573148978258",
+    punto3: "573024932188"
   },
+
+  // Punto 1 NO hace domicilios.
   sucursales: {
-    Centro: {
-      numero: 1,
-      nombre: "Punto 1 — Bombay 3",
-      ciudad: "Dosquebradas, Risaralda",
-      direccion: "Manzana 10, Casa 16, Bombay 3",
-      horario: "Lunes a sábado desde las 3:00 PM",
-      domicilios: false,
-      mapa: "https://www.google.com/maps/search/?api=1&query=Manzana+10+Casa+16+Bombay+3+Dosquebradas+Risaralda"
-    },
-    Cuba: {
-      numero: 2,
-      nombre: "Punto 2 — Barrio El Modelo",
-      ciudad: "Dosquebradas, Risaralda",
-      direccion: "Calle 49 # 19-27, Barrio El Modelo",
-      horario: "Lunes a sábado desde las 2:00 PM",
-      domicilios: true,
-      mapa: "https://www.google.com/maps/search/?api=1&query=Calle+49+19-27+Barrio+El+Modelo+Dosquebradas+Risaralda"
-    },
-    Circunvalar: {
-      numero: 3,
-      nombre: "Punto 3 — Barrio Providencia",
-      ciudad: "Pereira, Risaralda",
-      direccion: "Carrera 20 # 21-26, Barrio Providencia",
-      horario: "Lunes a sábado desde las 3:00 PM",
-      domicilios: true,
-      mapa: "https://www.google.com/maps/search/?api=1&query=Carrera+20+21-26+Barrio+Providencia+Pereira+Risaralda"
-    }
+    Centro: { punto: 1, domicilios: false, whatsapp: "punto1", ciudad:"Dosquebradas", direccion:"Manzana 10, Casa 16, Bombay 3" },
+    Cuba: { punto: 2, domicilios: true, whatsapp: "punto2", ciudad:"Dosquebradas", direccion:"Calle 49 # 19-27, Barrio El Modelo" },
+    Circunvalar: { punto: 3, domicilios: true, whatsapp: "punto3", ciudad:"Pereira", direccion:"Carrera 20 # 21-26, Barrio Providencia" }
   },
+
   tarifasDomicilio: {
-    Cuba: {
-      Dosquebradas: {
-        "El Japón":5300,"San Gregorio":5300,"San Rafael":5300,"Olaya Herrera":5300,"Coogemela":5300,"Valher":5300,"Fabio León":5300,"La Cabaña":5300,"Pío XII":5300,"Los Leones":5300,"El Carmen":5300,"Los Cámbulos":5300,"Alonso Valencia":5300,"Villa Fanny":5300,"La Aurora":5300,"El Paraíso":5300,"Santiago Londoño":5300,"Camilo Mejía Duque":5300,"Los Héroes":5300,"Vela I y II":5300,"Los Abedules":5300,"Altos de Santa Mónica":5300,"Las Garzas":5300,"Villa Santa Mónica":5300,"Villa Clara":5300,"Panorama Center":5300,"Diana Turbay":5300,"Álvaro Patiño Amariles I y II":5300,"Saturno":5300,"La Sultana":5300,
-        "Los Olivos":6300,"Campestre A":6300,"Campestre B":6300,"Campestre C":6300,"Campestre D":6300,"El Refugio":6300,"Tairona":6300,"El Oasis":6300,"Torres del Sol":6300,"Quintas del Campestre":6300,"Villa del Campestre":6300,"Maracay":6300,"Santa Isabel I":6300,"Santa Isabel II":6300,"El Poblado":6300,"Lusitania":6300,"Santa Clara":6300,"Pasadena":6300,
-        "Otún":7300,"El Balso":7300,"Las Vegas":7300,"La Graciela":7300,"La Esneda":7300,"La Badea":7300,"Inquilinos":7300,"Minuto de Dios":7300,"Villa Alexandra":7300,"Pedregales":7300,"La Romelia":7300,"La Romelia Alta":7300,"La Romelia Baja":7300,"Galaxia":7300,"Las Acacias":7300,"Los Pinos":7300,"Los Guamos":7300,"Bocacanoa":7300,"El Bosque-Carbonero":7300,"La Floresta":7300,"Estación Gutiérrez":7300,"Villa Carola":7300,"Bosques de la Acuarela":7300,"Lara Bonilla":7300,"El Rosal":7300,"El Chicó":7300,"Villa Colombia":7300,"La Semilla":7300,"Tejares de la Loma":7300,"Nuevo Bosque":7300,
-        "Sectores alejados de La Romelia":8300,"Sectores altos de La Romelia":8300,"Sectores alejados de La Acuarela":8300,"Zonas rurales cercanas":9300,"Sectores periféricos de Dosquebradas":9300
-      },
-      Pereira: {
-        "Centro":10300,"San Nicolás":10300,"Río Otún":10300,"Ferrocarril":10300,"Villavicencio":10300,"Oriente":10300,"El Jardín":10300,"Boston":10300,"Olímpica":10300,"Universidad":10300,
-        "Perla del Otún":11300,"El Poblado":11300,"Villa Santana":11300,"Consota":11300,"El Oso":11300,"San Joaquín":11300,"Kennedy":11300,"Maraya":11300,"Jardín I":11300,"Jardín II":11300,"Jardín III":11300,"Los Andes":11300,"Los Arrayanes":11300,"Los Cedros":11300,"Los Quimbayas":11300,"Niza I":11300,"Niza II":11300,"Portal de Los Cedros":11300,"Villas del Jardín":11300,"Ciudadela Comfamiliar":11300,"Villa del Café":11300,"Nuevo Horizonte":11300,"Paz Verde":11300,"Rincón del Café":11300,
-        "El Rocío":12300,"Rocío Bajo":12300,"Rocío Alto":12300,"Sectores altos de Villa Santana":12300,"Sectores alejados de El Oso":12300,"Sectores alejados de Consota":12300,"Sectores alejados de San Joaquín":12300,"Sectores periféricos de Pereira":12300
-      },
-      "Parque Industrial":{"Parque Industrial":15300,"Sector A – Parque Industrial":15300,"Sectores residenciales del Parque Industrial":15300},
-      "Cuba":{"Cuba":15300,"San Fernando":15300,"La Independencia":16300,"La Playita":16300,"La Unión":16300,"Barberos":17300,"Brisas del Consotá":17300,"Cortés":17300,"Rafael Uribe I":18300},
-      "Cerritos":{"Vía Cerritos / sectores iniciales":18300,"Cerritos":20300,"Galicia":20300,"Galicia Alta":20300,"Esperanza Galicia":20300,"Estación Villegas":20300,"Cerritos Campestre":20300,"Reservas del Campo":20300,"Senderos del Campo":20300,"Portal del Campo":20300,"Casas del Campo":20300,"Sol de Galicia":20300,"El Tigre — sectores cercanos":20300,"El Tigre — sectores alejados":22300,"Mukava del Valle":22300,"Sectores rurales / fincas alejadas":22300},
-      "Vía Armenia":{"Vía Armenia — sectores cercanos":18300,"Vía Armenia — zona normal":20300,"Vía Armenia — sectores alejados":22300,"Fincas / sectores rurales alejados":22300},
-      "Santa Rosa de Cabal":{"Hermosa Etapa I":15300,"Hermosa Etapa II":15300,"Hermosa Etapa III":15300,"Hermosa Etapa IV":15300,"Hermosa Etapa V":15300,"Hermosa Etapa VI":15300,"Los Corales":15300,"Los Ángeles":15300,"Los Portales de la Villa":15300,"Ciudadela Florida del Río":15300,"Portal de la Hermosa":15300,"Jardín de la Hermosa":15300,"Los Sauces":15300,"San Roque":15300,"Presbítero Francisco Londoño":15300,"Villas de San Fernando":15300,"Mirador de la Villa":15300,"Villa Diana I":15300,"Villa Diana II":15300,"Villa Diana III":15300,"Villa Cabal":15300,"Fermín López":15300,"José Ignacio López Arcila":15300,"El Campestre":15300,"Las Camelias":15300,"Los Bloques":15300,"Las Araucarias":15300,"Los Portales":15300,"Linares":15300,"Las Quintas":15300,"El Edén":15300,"La Eugenia":15300,"Sor Teresa de Calcuta":15300,"San Francisco":15300,"Córdoba":17300,"Suiza":17300,"La Milagrosa":17300,"Rotario":17300,"La Unión":17300,"La Quiebra":17300,"San Eugenio":17300,"Pío XII":17300,"San Bernardino":17300,"Santa Helena":17300,"La Primavera":17300,"Altos de Veracruz":17300,"Ozanam":17300,"San Diego":17300,"Simón Bolívar":17300,"Cerros de la Traviata":17300,"El Paraíso":17300,"Cartaguito":17300,"Fondo Obrero":17300,"Monserrate Casas":17300,"Monserrate Bloques":17300,"Los Álamos":17300,"Portal de Monserrate":17300,"Los Andes":17300,"Urbanización Pindaná":17300,"El Truco I":17300,"El Truco II":17300,"El Carmelo":17300,"La Estación":17300,"Sector Plaza de Mercado":17300,"Italia":20300,"Villa Oruma":20300,"La Trinidad I":20300,"La Trinidad II":20300,"La Trinidad III":20300,"Bosques de Santa Ana I":20300,"Bosques de Santa Ana II":20300,"San Luis Gonzaga":20300,"El Poblado":20300,"Terrazas de las Colinas":20300,"Los Jardines":20300,"Guayacanes":20300,"Villa Fanny":20300,"La Flora I":20300,"La Flora II":20300,"Kennedy":20300,"Los Sauces":20300,"La Carolina":20300,"Villa Alegría":20300,"San Vicente":20300,"Villa Deisy":20300,"Nuevo Horizonte":20300,"Villa Xiomara I":20300,"Villa Xiomara II":20300,"Los Laureles":20300,"Altos de Laureles":20300,"Colombia I":20300,"Colombia II":20300,"Las Terrazas":20300,"El Carmelo":20300,"Montearroyo":20300,"Los Pinos":20300,"El Paipa":20300,"Caldas":20300,"La María":20300,"Ciudadela Artesanal":20300,"Casas Fiscales":20300,"El Vergel":20300,"Los Cristales":20300,"Los Robles":20300,"Los Alcázares":20300,"El Triunfo":20300,"El Palmar":20300,"Belén":20300,"Villa Amparo":20300,"Betania I":20300,"Betania II":20300,"Betania III":20300,"Pinares":20300,"Villa Rosita":20300,"Portales de Betania":20300,"Bosques de Santa Ana III":20300,"La Carrilera":20300,"Palos de Moguer":20300,"Villa Nora":20300}
-    },
-    Circunvalar: {
-      "Providencia": 5300,
-      "Palermo & Venecia": 5300,
-      "Lorena & Olaya Herrera": 5300,
-      "Centenario & San Nicolás": 6300,
-      "Boston & San Luis": 6300,
-      "Las Gaviotas & La Unidad": 6300,
-      "Caracol la Curva": 8300,
-      "Rocío Bajo": 7300,
-      "Rocío Alto": 8300,
-      "Colombo Americano": 9300,
-      "La Ofrenda": 13300,
-      "Ciudad Jardín & Álamos": 6300,
-      "Canaán": 6300,
-      "UTP & El Bosque": 7300,
-      "Popular Modelo": 7300,
-      "Pinares & Alpes": 6300,
-      "Pinares Zona Campestre": 7300,
-      "Corocito": 7300,
-      "Alfonso López": 7300,
-      "Kennedy": 8300,
-      "Villa Santana": 10300,
-      "Las Brisas": 11300,
-      "El Remanso – Guayabal & Tokio": 12300,
-      "La Florida": 20300,
-      "Calle 11 hasta Calle 40 con Av Rio": 7300,
-      "Calle 41 hasta Calle 50": 8300,
-      "La Elvira & Niza 1 y 2": 7300,
-      "Maraya": 8300,
-      "Batallon Av Sur & Av 30": 9300,
-      "Galán – La Esneda & Bavaria": 7300,
-      "El Triunfo – El Balso & San Judas": 8300,
-      "Aeropuerto & Nacederos": 10300,
-      "Parque Industrial Centro": 11300,
-      "Parque Industrial Zona Alta": 13300,
-      "Poblado 1 & Hamburgo": 6300,
-      "Poblado 2 & Villa del Prado": 7300,
-      "Samaria 1 y 2": 8300,
-      "Villa Verde": 9300,
-      "Miraflores": 10300,
-      "Naranjito": 11300,
-      "Jardín 1 y 2": 7300,
-      "Villas del Jardín 1,2y3": 7300,
-      "Home Center & Amatista": 7300,
-      "Arc de la Colina & Tanambi": 7300,
-      "La Castellana - Tisú & Amaru": 8300,
-      "El Dorado": 8300,
-      "Panorama 1 y 2": 10300,
-      "Padre Valencia": 10300,
-      "La Divisa": 10300,
-      "El Nogal": 10300,
-      "Las Mercedes": 11300,
-      "Estación Policía El Acuario": 11300,
-      "Cuba hasta Viejo Paris": 11300,
-      "Los Sauces & Villa Eliza": 11300,
-      "Terranova": 12300,
-      "Los 2500 Lotes": 12300,
-      "Bosques de Cuba & Hacienda Cuba": 12300,
-      "San Marcos & Puertas de Alcalá": 13300,
-      "Montelíbano & Villa Navarra": 13300,
-      "El Cardal & Villa de Leiva": 13300,
-      "Villa Nova": 15300,
-      "Alta Vista y Batará": 12300,
-      "Entre Ríos – Toledo – T de Alejandría": 13300,
-      "Corales – Gamma & Cañaveral": 11300,
-      "Estadio y Expo futuro": 12300,
-      "Club el Nogal & San Silvestre": 12300,
-      "Senderos de San Silvestre": 14300,
-      "Belmonte & Pueblito Cafetero": 13300,
-      "Portal de Cerritos & Solarum": 15300,
-      "Belmonte Bajo & Mukava": 15300,
-      "San José de las Villas 1,2,3,4,5": 15300,
-      "Papiro & Mitaca": 8300,
-      "Bambú & Teka": 8300,
-      "Portal del Sol & Los Cerezos": 8300,
-      "La Macarena": 9300,
-      "La Graciela": 9300,
-      "Santa Isabel": 9300,
-      "Campestre A y D": 9300,
-      "Campestre B y C": 10300,
-      "Mirador del Colibrí": 11300,
-      "Japón": 9300,
-      "Monte Bonito": 10300,
-      "Frailes": 11300,
-      "Santa Mónica": 8300,
-      "La Pradera & Milán": 9300,
-      "Irazu & Bonanza": 10300,
-      "Guadalupe": 10300,
-      "Los Molinos & El Progreso": 10300,
-      "Molivento de las Villas 1 y 2": 11300,
-      "Zaguán de Villa Vento": 11300,
-      "Las Violetas & Terragrata": 11300,
-      "Los Naranjos y San Fernando": 11300,
-      "La Capilla & Santa Teresita": 12300,
-      "Villa del Campo & Tacuara": 11300,
-      "Bombay & Villa Roble": 12300,
-      "Agua Azul & Carbonero": 13300,
-      "Bosques de la Acuarela": 14300,
-      "La Romelia": 15300,
-      "Vereda el Tigre": 20300,
-      "Galicia": 20300,
-      "Parque Consota & Ucumari": 22300,
-      "Pereira Cerritos Entrada 1 a la 4": 20300,
-      "Pereira Cerritos Entrada 5 a la 8": 22300
-    }
+    "Centro Pereira": 5000,
+    "Cuba": 5000,
+    "Circunvalar": 6000,
+    "Alamos": 6000,
+    "Dosquebradas Centro": 8000,
+    "Dosquebradas - La Pradera": 8500,
+    "Dosquebradas - La Badea": 9000,
+    "Cerritos": 9000,
+    "Cerritos - Zona rural": 12000
   }
 };
 
-const PRODUCTOS_FALLBACK = [{"id":"papa-mixta","cat":"Papas rellenas","icon":"🥔","nombre":"Papa Mixta","desc":"Carne, pollo y huevo cocinado.","precio":5000,"puntos":["Centro","Cuba","Circunvalar"]},{"id":"papa-barril","cat":"Papas rellenas","icon":"🥔","nombre":"Papa Rellena de Carne Asada al Barril","desc":"Papa rellena de carne asada al barril.","precio":5000,"puntos":["Centro","Cuba","Circunvalar"]},{"id":"emp-carne","cat":"Empanadas","icon":"🥟","nombre":"Empanada de carne desmechada","desc":"Carne desmechada de res y papa.","precio":2500,"puntos":["Centro","Cuba","Circunvalar"]},{"id":"emp-pollo","cat":"Empanadas","icon":"🥟","nombre":"Empanada de pollo","desc":"Pollo y papa.","precio":2500,"puntos":["Centro","Cuba","Circunvalar"]},{"id":"emp-mixta","cat":"Empanadas","icon":"🥟","nombre":"Empanada mixta","desc":"Pollo, carne de res y papa.","precio":2500,"puntos":["Centro","Cuba","Circunvalar"]},{"id":"emp-chicharron-platano","cat":"Empanadas","icon":"🥟","nombre":"Empanada de chicharrón con plátano maduro","desc":"Chicharrón y plátano maduro.","precio":3000,"puntos":["Centro","Cuba","Circunvalar"]},{"id":"emp-queso","cat":"Empanadas","icon":"🥟","nombre":"Empanada de queso","desc":"Queso.","precio":3000,"puntos":["Centro","Cuba","Circunvalar"]},{"id":"emp-ranchera","cat":"Empanadas","icon":"🥟","nombre":"Empanada ranchera","desc":"Carne de res, queso, tocineta y salchicha.","precio":4000,"puntos":["Centro","Cuba","Circunvalar"]},{"id":"emp-carne-barril","cat":"Empanadas","icon":"🥟","nombre":"Empanada de carne asada al barril","desc":"Carne asada al barril.","precio":4000,"puntos":["Centro","Cuba","Circunvalar"]},{"id":"arepa-huevo-perico-carne","cat":"Arepas","icon":"🫓","nombre":"Arepa de huevo, perico y carne desmechada","desc":"Huevo, perico y carne desmechada.","precio":6000,"puntos":["Centro","Cuba","Circunvalar"]},{"id":"mega-tradicional-30","cat":"Mega empanadas de 30 cm","icon":"🥟","nombre":"Mega Empanada Tradicional de 30 cm","desc":"Carne, pollo, chicharrón, tocineta, queso, salchicha ranchera, plátano maduro y carne asada al barril.","precio":12000,"puntos":["Centro","Cuba","Circunvalar"]},{"id":"mega-arrecha","cat":"Mega empanadas de 30 cm","icon":"🥟","nombre":"Mega Arrecha","desc":"Arroz, pollo, chicharrón, tocineta, carne asada al barril, queso, plátano y salchicha ranchera.","precio":15000,"puntos":["Centro","Cuba","Circunvalar"]},{"id":"mega-desmechada","cat":"Mega empanadas de 30 cm","icon":"🥟","nombre":"Mega Desmechada","desc":"Carne de res desmechada con guiso criollo.","precio":15000,"puntos":["Centro","Cuba","Circunvalar"]},{"id":"mega-barril","cat":"Mega empanadas de 30 cm","icon":"🥟","nombre":"Mega Barril","desc":"Carne asada al barril.","precio":15000,"puntos":["Centro","Cuba","Circunvalar"]},{"id":"coca-01","cat":"Coca-Cola","icon":"🥤","nombre":"Coca-Cola","desc":"Bebida gaseosa o refresco.","precio":4000,"puntos":["Cuba","Circunvalar"]},{"id":"coca-02","cat":"Coca-Cola","icon":"🥤","nombre":"Ginger","desc":"Bebida gaseosa o refresco.","precio":3000,"puntos":["Cuba","Circunvalar"]},{"id":"coca-03","cat":"Coca-Cola","icon":"🥤","nombre":"Premio","desc":"Bebida gaseosa o refresco.","precio":3000,"puntos":["Cuba","Circunvalar"]},{"id":"coca-04","cat":"Coca-Cola","icon":"🥤","nombre":"Sun Tea","desc":"Bebida gaseosa o refresco.","precio":4000,"puntos":["Cuba","Circunvalar"]},{"id":"coca-05","cat":"Coca-Cola","icon":"🥤","nombre":"Del Valle","desc":"Bebida gaseosa o refresco.","precio":3000,"puntos":["Cuba","Circunvalar"]},{"id":"coca-06","cat":"Coca-Cola","icon":"🥤","nombre":"Agua","desc":"Bebida gaseosa o refresco.","precio":3000,"puntos":["Cuba","Circunvalar"]},{"id":"coca-07","cat":"Coca-Cola","icon":"🥤","nombre":"Sprite","desc":"Bebida gaseosa o refresco.","precio":3000,"puntos":["Cuba","Circunvalar"]},{"id":"coca-08","cat":"Coca-Cola","icon":"🥤","nombre":"Fanta","desc":"Bebida gaseosa o refresco.","precio":3000,"puntos":["Cuba","Circunvalar"]},{"id":"coca-09","cat":"Coca-Cola","icon":"🥤","nombre":"Quatro","desc":"Bebida gaseosa o refresco.","precio":3000,"puntos":["Cuba","Circunvalar"]},{"id":"coca-10","cat":"Coca-Cola","icon":"🥤","nombre":"Soda","desc":"Bebida gaseosa o refresco.","precio":4000,"puntos":["Cuba","Circunvalar"]},{"id":"coca-11","cat":"Coca-Cola","icon":"🥤","nombre":"Del Valle Frutos","desc":"Bebida gaseosa o refresco.","precio":4000,"puntos":["Cuba","Circunvalar"]},{"id":"coca-12","cat":"Coca-Cola","icon":"🥤","nombre":"Coca-Cola 1.5 L","desc":"Bebida gaseosa o refresco.","precio":7000,"puntos":["Cuba","Circunvalar"]},{"id":"coca-13","cat":"Coca-Cola","icon":"🥤","nombre":"Sprite 1.5 L","desc":"Bebida gaseosa o refresco.","precio":7000,"puntos":["Cuba","Circunvalar"]},{"id":"coca-14","cat":"Coca-Cola","icon":"🥤","nombre":"Coca-Cola 2.25 L","desc":"Bebida gaseosa o refresco.","precio":9000,"puntos":["Cuba","Circunvalar"]},{"id":"coca-15","cat":"Coca-Cola","icon":"🥤","nombre":"Coca-Cola 3 L","desc":"Bebida gaseosa o refresco.","precio":12000,"puntos":["Cuba","Circunvalar"]},{"id":"coca-16","cat":"Coca-Cola","icon":"🥤","nombre":"Del Valle 1.5 L","desc":"Bebida gaseosa o refresco.","precio":7000,"puntos":["Cuba","Circunvalar"]},{"id":"coca-17","cat":"Coca-Cola","icon":"🥤","nombre":"Quatro 1.5 L","desc":"Bebida gaseosa o refresco.","precio":7000,"puntos":["Cuba","Circunvalar"]},{"id":"postobon-01","cat":"Postobón","icon":"🥤","nombre":"Postobón Manzana 250 ml","desc":"Bebida gaseosa.","precio":4000,"puntos":["Cuba"]},{"id":"postobon-02","cat":"Postobón","icon":"🥤","nombre":"Postobón Manzana 400 ml","desc":"Bebida gaseosa.","precio":4000,"puntos":["Cuba"]},{"id":"postobon-03","cat":"Postobón","icon":"🥤","nombre":"Postobón Manzana 600 ml","desc":"Bebida gaseosa.","precio":4000,"puntos":["Cuba"]},{"id":"postobon-04","cat":"Postobón","icon":"🥤","nombre":"Postobón Manzana 1.5 L","desc":"Bebida gaseosa.","precio":4000,"puntos":["Cuba"]},{"id":"postobon-05","cat":"Postobón","icon":"🥤","nombre":"Postobón Manzana 2.5 L","desc":"Bebida gaseosa.","precio":4000,"puntos":["Cuba"]},{"id":"postobon-06","cat":"Postobón","icon":"🥤","nombre":"Postobón Colombiana 250 ml","desc":"Bebida gaseosa.","precio":4000,"puntos":["Cuba"]},{"id":"postobon-07","cat":"Postobón","icon":"🥤","nombre":"Postobón Colombiana 400 ml","desc":"Bebida gaseosa.","precio":4000,"puntos":["Cuba"]},{"id":"postobon-08","cat":"Postobón","icon":"🥤","nombre":"Postobón Colombiana 600 ml","desc":"Bebida gaseosa.","precio":4000,"puntos":["Cuba"]},{"id":"postobon-09","cat":"Postobón","icon":"🥤","nombre":"Postobón Colombiana 1.5 L","desc":"Bebida gaseosa.","precio":4000,"puntos":["Cuba"]},{"id":"postobon-10","cat":"Postobón","icon":"🥤","nombre":"Postobón Colombiana 2.5 L","desc":"Bebida gaseosa.","precio":4000,"puntos":["Cuba"]},{"id":"postobon-11","cat":"Postobón","icon":"🥤","nombre":"Postobón Uva 250 ml","desc":"Bebida gaseosa.","precio":4000,"puntos":["Cuba"]},{"id":"postobon-12","cat":"Postobón","icon":"🥤","nombre":"Postobón Uva 400 ml","desc":"Bebida gaseosa.","precio":4000,"puntos":["Cuba"]},{"id":"postobon-13","cat":"Postobón","icon":"🥤","nombre":"Postobón Uva 600 ml","desc":"Bebida gaseosa.","precio":4000,"puntos":["Cuba"]},{"id":"postobon-14","cat":"Postobón","icon":"🥤","nombre":"Postobón Uva 1.5 L","desc":"Bebida gaseosa.","precio":4000,"puntos":["Cuba"]},{"id":"postobon-15","cat":"Postobón","icon":"🥤","nombre":"Postobón Uva 2.5 L","desc":"Bebida gaseosa.","precio":4000,"puntos":["Cuba"]},{"id":"postobon-16","cat":"Postobón","icon":"🥤","nombre":"Postobón Naranja 250 ml","desc":"Bebida gaseosa.","precio":4000,"puntos":["Cuba"]},{"id":"postobon-17","cat":"Postobón","icon":"🥤","nombre":"Postobón Naranja 400 ml","desc":"Bebida gaseosa.","precio":4000,"puntos":["Cuba"]},{"id":"postobon-18","cat":"Postobón","icon":"🥤","nombre":"Postobón Naranja 600 ml","desc":"Bebida gaseosa.","precio":4000,"puntos":["Cuba"]},{"id":"postobon-19","cat":"Postobón","icon":"🥤","nombre":"Postobón Naranja 1.5 L","desc":"Bebida gaseosa.","precio":4000,"puntos":["Cuba"]},{"id":"postobon-20","cat":"Postobón","icon":"🥤","nombre":"Postobón Naranja 2.5 L","desc":"Bebida gaseosa.","precio":4000,"puntos":["Cuba"]},{"id":"postobon-21","cat":"Postobón","icon":"🥤","nombre":"Postobón Tamarindo 250 ml","desc":"Bebida gaseosa.","precio":4000,"puntos":["Cuba"]},{"id":"postobon-22","cat":"Postobón","icon":"🥤","nombre":"Postobón Tamarindo 400 ml","desc":"Bebida gaseosa.","precio":4000,"puntos":["Cuba"]},{"id":"postobon-23","cat":"Postobón","icon":"🥤","nombre":"Postobón Tamarindo 600 ml","desc":"Bebida gaseosa.","precio":4000,"puntos":["Cuba"]},{"id":"postobon-24","cat":"Postobón","icon":"🥤","nombre":"Postobón Tamarindo 1.5 L","desc":"Bebida gaseosa.","precio":4000,"puntos":["Cuba"]},{"id":"postobon-25","cat":"Postobón","icon":"🥤","nombre":"Postobón Tamarindo 2.5 L","desc":"Bebida gaseosa.","precio":4000,"puntos":["Cuba"]},{"id":"cong-carne","cat":"Congeladas","icon":"🧊","nombre":"Empanadas congeladas de carne x12","desc":"Paquete de 12 unidades.","precio":24000,"puntos":["Cuba","Circunvalar"]},{"id":"cong-pollo","cat":"Congeladas","icon":"🧊","nombre":"Empanadas congeladas de pollo x12","desc":"Paquete de 12 unidades.","precio":24000,"puntos":["Cuba","Circunvalar"]},{"id":"cong-mixta","cat":"Congeladas","icon":"🧊","nombre":"Empanadas congeladas mixtas x12","desc":"Paquete de 12 unidades.","precio":24000,"puntos":["Cuba","Circunvalar"]},{"id":"cong-queso","cat":"Congeladas","icon":"🧊","nombre":"Empanadas congeladas de queso x12","desc":"Paquete de 12 unidades.","precio":30000,"puntos":["Cuba","Circunvalar"]},{"id":"cong-barril","cat":"Congeladas","icon":"🧊","nombre":"Empanadas congeladas de carne al barril x12","desc":"Paquete de 12 unidades.","precio":42000,"puntos":["Cuba","Circunvalar"]},{"id":"cong-ranchera","cat":"Congeladas","icon":"🧊","nombre":"Empanadas congeladas rancheras x12","desc":"Paquete de 12 unidades.","precio":42000,"puntos":["Cuba","Circunvalar"]},{"id":"cong-chicharron","cat":"Congeladas","icon":"🧊","nombre":"Empanadas congeladas de chicharrón x12","desc":"Paquete de 12 unidades.","precio":30000,"puntos":["Cuba","Circunvalar"]},{"id":"salsa-tomate","cat":"Salsas","icon":"🧂","nombre":"Salsa de tomate","desc":"Salsa para acompañar.","precio":0,"puntos":["Centro","Cuba","Circunvalar"]},{"id":"salsa-ajo","cat":"Salsas","icon":"🧂","nombre":"Salsa de ajo","desc":"Salsa para acompañar.","precio":0,"puntos":["Centro","Cuba","Circunvalar"]},{"id":"salsa-rosada","cat":"Salsas","icon":"🧂","nombre":"Salsa rosada","desc":"Salsa para acompañar.","precio":0,"puntos":["Centro","Cuba","Circunvalar"]},{"id":"salsa-picante","cat":"Salsas","icon":"🧂","nombre":"Salsa picante","desc":"Salsa para acompañar.","precio":0,"puntos":["Centro","Cuba","Circunvalar"]},{"id":"salsa-tartara","cat":"Salsas","icon":"🧂","nombre":"Salsa tártara","desc":"Salsa para acompañar.","precio":0,"puntos":["Centro","Cuba","Circunvalar"]},{"id":"salsa-mostaza","cat":"Salsas","icon":"🧂","nombre":"Salsa de mostaza","desc":"Salsa para acompañar.","precio":0,"puntos":["Centro","Cuba","Circunvalar"]},{"id":"salsa-miel-mostaza","cat":"Salsas","icon":"🧂","nombre":"Salsa miel mostaza","desc":"Salsa para acompañar.","precio":0,"puntos":["Centro","Cuba","Circunvalar"]},{"id":"salsa-bbq","cat":"Salsas","icon":"🧂","nombre":"Salsa BBQ","desc":"Salsa para acompañar.","precio":0,"puntos":["Centro","Cuba","Circunvalar"]},{"id":"salsa-chimichurri","cat":"Salsas","icon":"🧂","nombre":"Salsa chimichurri","desc":"Salsa para acompañar.","precio":0,"puntos":["Centro","Cuba","Circunvalar"]},{"id":"salsa-guacamole","cat":"Salsas","icon":"🧂","nombre":"Guacamole","desc":"Salsa para acompañar.","precio":0,"puntos":["Centro","Cuba","Circunvalar"]},{"id":"salsa-hogao","cat":"Salsas","icon":"🧂","nombre":"Salsa de hogao","desc":"Salsa para acompañar.","precio":0,"puntos":["Centro","Cuba","Circunvalar"]},{"id":"salsa-mayonesa","cat":"Salsas","icon":"🧂","nombre":"Mayonesa","desc":"Salsa para acompañar.","precio":0,"puntos":["Centro","Cuba","Circunvalar"]},{"id":"salsa-mayonesa-ajo","cat":"Salsas","icon":"🧂","nombre":"Mayonesa de ajo","desc":"Salsa para acompañar.","precio":0,"puntos":["Centro","Cuba","Circunvalar"]},{"id":"salsa-cilantro","cat":"Salsas","icon":"🧂","nombre":"Salsa de cilantro","desc":"Salsa para acompañar.","precio":0,"puntos":["Centro","Cuba","Circunvalar"]},{"id":"salsa-aguacate","cat":"Salsas","icon":"🧂","nombre":"Salsa de aguacate","desc":"Salsa para acompañar.","precio":0,"puntos":["Centro","Cuba","Circunvalar"]},{"id":"salsa-queso","cat":"Salsas","icon":"🧂","nombre":"Salsa de queso","desc":"Salsa para acompañar.","precio":0,"puntos":["Centro","Cuba","Circunvalar"]},{"id":"salsa-ranch","cat":"Salsas","icon":"🧂","nombre":"Salsa ranch","desc":"Salsa para acompañar.","precio":0,"puntos":["Centro","Cuba","Circunvalar"]},{"id":"salsa-maracuya","cat":"Salsas","icon":"🧂","nombre":"Salsa de maracuyá","desc":"Salsa para acompañar.","precio":0,"puntos":["Centro","Cuba","Circunvalar"]},{"id":"salsa-pina","cat":"Salsas","icon":"🧂","nombre":"Salsa de piña","desc":"Salsa para acompañar.","precio":0,"puntos":["Centro","Cuba","Circunvalar"]},{"id":"salsa-especial","cat":"Salsas","icon":"🧂","nombre":"Salsa especial","desc":"Salsa para acompañar.","precio":0,"puntos":["Centro","Cuba","Circunvalar"]}];
-let PRODUCTOS = [...PRODUCTOS_FALLBACK];
+const productos = [
+  {id:"emp-carne",cat:"Empanadas",icon:"🥟",nombre:"Empanada de Carne",desc:"Empanada tradicional de carne.",precio:3000},
+  {id:"emp-pollo",cat:"Empanadas",icon:"🥟",nombre:"Empanada de Pollo",desc:"Empanada tradicional de pollo.",precio:3000},
+  {id:"emp-queso",cat:"Empanadas",icon:"🥟",nombre:"Empanada de Queso",desc:"Empanada rellena de queso.",precio:3500},
+  {id:"emp-mixta",cat:"Empanadas",icon:"🥟",nombre:"Empanada Mixta",desc:"Deliciosa combinación de carne y pollo.",precio:4000},
+];
 
-async function cargarProductosDesdeSupabase(){
-  try{
-    const c=obtenerSupabaseClient();
-    const {data,error}=await c.from("productos")
-      .select("id,categoria,icono,nombre,descripcion,precio,sucursales,activo")
-      .eq("activo",true)
-      .order("categoria",{ascending:true})
-      .order("nombre",{ascending:true});
-    if(error) throw error;
-    PRODUCTOS=(data||[]).map(p=>({
-      id:p.id,
-      cat:p.categoria,
-      icon:p.icono||"🍽️",
-      nombre:p.nombre,
-      desc:p.descripcion||"",
-      precio:Number(p.precio||0),
-      puntos:Array.isArray(p.sucursales)?p.sucursales:[]
-    }));
-    console.info("Menú cargado desde Supabase:",PRODUCTOS.length,"productos activos.");
-  }catch(e){
-    console.warn("No se pudo cargar el menú desde Supabase. Se usa la copia de respaldo del index.",e);
-  }
-}
-
-let carrito = cargarCarrito();
-let modalidadEntrega = "";
+let carrito = JSON.parse(localStorage.getItem("carritoEmpanadasQueRico") || "[]");
 let pedidoActual = null;
-let supabaseClient = null;
+let modalidadEntrega = null;
+let configuracionDomiciliosPublica = [];
+let configuracionCiudadesPublica = [];
+let supabasePublico = null;
+let supabasePublicoRealtimeChannel = null;
 
-function $(id){ return document.getElementById(id); }
-function dinero(n){ return "$" + Number(n || 0).toLocaleString("es-CO"); }
-function escapar(t){
-  return String(t ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-}
-function cargarCarrito(){
-  try { return JSON.parse(localStorage.getItem("carritoLaEsquina") || "[]"); }
-  catch { return []; }
-}
-function guardarCarrito(){ localStorage.setItem("carritoLaEsquina", JSON.stringify(carrito)); }
-function producto(id){ return PRODUCTOS.find(p=>p.id===id); }
-function puntoActual(){ return localStorage.getItem("sucursalLaEsquina") || ""; }
-
-function obtenerSupabaseClient(){
-  if(supabaseClient) return supabaseClient;
-  const cfg = window.SUPABASE_CONFIG || {};
-  if(!window.supabase) throw new Error("La librería de Supabase no está cargada.");
-  if(!cfg.url || !cfg.anonKey) throw new Error("config.js no está cargado o está incompleto.");
-  supabaseClient = window.supabase.createClient(cfg.url, cfg.anonKey);
-  return supabaseClient;
+/* =========================
+   2. UTILIDADES
+   ========================= */
+function dinero(valor) {
+  return "$" + Number(valor || 0).toLocaleString("es-CO");
 }
 
-function horaColombia(){
-  return new Date(new Date().toLocaleString("en-US",{timeZone:"America/Bogota"}));
-}
-function cerradoDomingo(){ return horaColombia().getDay() === 0; }
-function abiertoPunto(p){
-  if(cerradoDomingo()) return false;
-  const inicio = p === "Cuba" ? 14*60 : 15*60;
-  const d=horaColombia(), m=d.getHours()*60+d.getMinutes();
-  return m >= inicio;
-}
-function domicilioDisponible(p){
-  if(cerradoDomingo() || !CONFIG.sucursales[p]?.domicilios) return false;
-  const d=horaColombia(), m=d.getHours()*60+d.getMinutes();
-  return m >= 15*60 && m <= 22*60+30;
-}
-function estadoPunto(p){
-  if(cerradoDomingo()) return "🔴 Cerrado hoy (domingo)";
-  return abiertoPunto(p) ? "🟢 Abierto" : `🕒 Abre desde ${p==="Cuba"?"2:00 PM":"3:00 PM"}`;
-}
-function estadoDomicilio(p){
-  if(!CONFIG.sucursales[p]?.domicilios) return "❌ Sin domicilio";
-  if(cerradoDomingo()) return "🔴 Domicilios cerrados hoy";
-  return domicilioDisponible(p) ? "🟢 Domicilios 3:00 PM–10:30 PM" : "🕒 Domicilios desde las 3:00 PM";
+function escapar(texto) {
+  return String(texto ?? "").replace(/[&<>"']/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  }[c]));
 }
 
-function mostrarSelectorSucursal(){
-  const overlay=$("overlaySucursal");
-  overlay.innerHTML = `
-    <div class="modal branch-modal">
-      <button class="modal-close" type="button" onclick="cerrarSelectorSucursal()">✕</button>
-      <span class="eyebrow">EMPANADAS QUE RICO</span>
-      <h2>¿Dónde quieres hacer tu pedido?</h2>
-      <p class="muted">El menú se adapta al punto que elijas.</p>
-      <div class="branch-grid">
-        ${Object.entries(CONFIG.sucursales).map(([k,p])=>`
-          <button class="branch-card" type="button" onclick="seleccionarSucursal('${k}')">
-            <span class="branch-number">0${p.numero}</span>
-            <h3>${escapar(p.nombre)}</h3>
-            <strong>${escapar(p.ciudad)}</strong>
-            <p>${escapar(p.direccion)}</p>
-            <small>🕒 ${escapar(p.horario)}</small>
-            <small>${estadoPunto(k)}</small>
-            <small>${k==="Centro" ? "📋 Solo menú · no se realizan domicilios" : estadoDomicilio(k)}</small>
-            <b>Elegir este punto →</b>
-          </button>
-        `).join("")}
-      </div>
-      <div class="sunday-note">🔴 Domingo: todos los puntos están cerrados.</div>
-    </div>`;
-  overlay.classList.remove("hidden");
-}
-function cerrarSelectorSucursal(){ $("overlaySucursal").classList.add("hidden"); }
-
-function seleccionarSucursal(p){
-  if(!CONFIG.sucursales[p]) return;
-  localStorage.setItem("sucursalLaEsquina",p);
-  carrito = carrito.filter(i => producto(i.id)?.puntos?.includes(p));
-  guardarCarrito();
-  cerrarSelectorSucursal();
-  renderTodo();
-  document.querySelector("#menu")?.scrollIntoView({behavior:"smooth"});
+function guardarCarrito() {
+  localStorage.setItem("carritoEmpanadasQueRico", JSON.stringify(carrito));
 }
 
-function renderMenu(){
-  const cont=$("menuContainer");
-  const p=puntoActual();
-  if(!p){
-    cont.innerHTML=`<div class="empty-menu"><div>📍</div><h3>Primero elige tu punto</h3><p>Selecciona una sucursal para ver el menú.</p><button class="primary-btn" type="button" onclick="mostrarSelectorSucursal()">Elegir sucursal</button></div>`;
-    $("subtituloSucursalMenu").textContent="Selecciona una sucursal para comenzar.";
-    return;
+function obtenerZonasPorCiudad(ciudad) {
+  const filas = configuracionDomiciliosPublica.filter(d =>
+    d.activo !== false && String(d.ciudad || "").trim() === String(ciudad || "").trim() &&
+    (d.sucursal === v4GetPunto() || !d.sucursal)
+  );
+  const dinamicas = [...new Set(filas.map(d => String(d.zona || "").trim()).filter(Boolean))];
+  if (dinamicas.length) return dinamicas;
+
+  const zonasFallback = {
+    Pereira: ["Centro Pereira","Cuba","Circunvalar","Alamos","Cerritos","Cerritos - Zona rural"],
+    Dosquebradas: ["Dosquebradas Centro","Dosquebradas - La Pradera","Dosquebradas - La Badea"]
+  };
+  return zonasFallback[ciudad] || [];
+}
+
+function obtenerTarifaDomicilio(ciudad, zona, sucursal = v4GetPunto()) {
+  const fila = configuracionDomiciliosPublica.find(d =>
+    d.activo !== false &&
+    String(d.ciudad || "").trim() === String(ciudad || "").trim() &&
+    String(d.zona || "").trim() === String(zona || "").trim() &&
+    String(d.sucursal || "") === String(sucursal || "")
+  );
+  if (fila) return Number(fila.precio || 0);
+  return Number(CONFIG.tarifasDomicilio[zona] || 0);
+}
+
+async function cargarConfiguracionDomiciliosPublica() {
+  try {
+    if (!window.supabase || !window.SUPABASE_CONFIG?.url || !window.SUPABASE_CONFIG?.anonKey) return;
+    supabasePublico ||= window.supabase.createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.anonKey);
+    const [domicilios, ciudades] = await Promise.all([
+      supabasePublico.from("configuracion_domicilios").select("id,ciudad,zona,precio,sucursal,activo").eq("activo", true),
+      supabasePublico.from("configuracion_ciudades_domicilios").select("id,ciudad,activo").eq("activo", true).order("ciudad")
+    ]);
+    if (!domicilios.error) configuracionDomiciliosPublica = domicilios.data || [];
+    if (!ciudades.error) configuracionCiudadesPublica = ciudades.data || [];
+    cargarCiudadesDomicilio();
+    cargarZonas();
+    actualizarDomicilio();
+  } catch (e) {
+    console.warn("No se pudo cargar la configuración de domicilios desde Supabase.", e);
   }
-  const lista=PRODUCTOS.filter(x=>x.puntos.includes(p));
-  const grupos={};
-  lista.forEach(x=>(grupos[x.cat] ||= []).push(x));
-  cont.innerHTML=Object.entries(grupos).map(([cat,arr])=>`
-    <section class="menu-category" data-category="${escapar(cat)}">
-      <div class="category-title"><h3>${escapar(cat)}</h3><span>${arr.length} opciones</span></div>
+}
+
+function cargarCiudadesDomicilio() {
+  const select = document.getElementById("clienteCiudad");
+  if (!select) return;
+  const actuales = [...select.options].map(o => o.value).filter(Boolean);
+  const dinamicas = configuracionCiudadesPublica.map(x => String(x.ciudad || "").trim()).filter(Boolean);
+  const porZonas = configuracionDomiciliosPublica.map(x => String(x.ciudad || "").trim()).filter(Boolean);
+  const ciudades = [...new Set([...dinamicas, ...porZonas, ...actuales])].filter(Boolean).sort((a,b)=>a.localeCompare(b,"es"));
+  select.innerHTML = '<option value="">Selecciona</option>' + ciudades.map(c => `<option value="${escapar(c)}">${escapar(c)}</option>`).join("");
+}
+
+
+/* =========================
+   3. MENÚ
+   ========================= */
+function renderMenu() {
+  const cont = document.getElementById("menuContainer");
+  const grupos = {};
+
+  productos.forEach(p => (grupos[p.cat] ||= []).push(p));
+
+  cont.innerHTML = Object.entries(grupos).map(([cat, lista]) => `
+    <div class="menu-category" data-category="${escapar(cat)}">
+      <div class="category-title"><h3>${escapar(cat)}</h3><div></div></div>
       <div class="product-grid">
-        ${arr.map(x=>`
-          <article class="product" data-name="${escapar(x.nombre.toLowerCase())}">
-            <div class="product-image">${x.icon}</div>
+        ${lista.map(p => `
+          <article class="product" data-name="${escapar(p.nombre.toLowerCase())}">
+            <div class="product-image">${p.icon}</div>
             <div class="product-content">
-              <h4>${escapar(x.nombre)}</h4>
-              <p>${escapar(x.desc)}</p>
+              <h4>${escapar(p.nombre)}</h4>
+              <p>${escapar(p.desc)}</p>
               <div class="product-bottom">
-                <strong class="price">${dinero(x.precio)}</strong>
-                ${p==="Centro" ? '<span class="menu-only-note">Solo menú</span>' : `<button class="add" type="button" onclick="agregar('${x.id}')">+ Agregar</button>`}
+                <span class="price">${dinero(p.precio)}</span>
+                <button class="add" onclick="agregar('${p.id}')">+ Agregar</button>
               </div>
             </div>
-          </article>`).join("")}
+          </article>
+        `).join("")}
       </div>
-    </section>`).join("");
-  $("subtituloSucursalMenu").textContent = `${CONFIG.sucursales[p].nombre} · ${estadoPunto(p)}`;
+    </div>
+  `).join("");
 }
-function filtrarProductos(){
-  const q=$("buscador").value.toLowerCase().trim();
-  document.querySelectorAll(".product").forEach(c=>c.style.display=c.dataset.name.includes(q)?"":"none");
-  document.querySelectorAll(".menu-category").forEach(g=>{
-    g.style.display=[...g.querySelectorAll(".product")].some(x=>x.style.display!=="none")?"":"none";
+
+function filtrarProductos() {
+  const q = document.getElementById("buscador").value.toLowerCase().trim();
+  document.querySelectorAll(".product").forEach(card => {
+    card.style.display = card.dataset.name.includes(q) ? "" : "none";
+  });
+  document.querySelectorAll(".menu-category").forEach(group => {
+    const visibles = [...group.querySelectorAll(".product")].some(x => x.style.display !== "none");
+    group.style.display = visibles ? "" : "none";
   });
 }
 
-function renderPuntos(){
-  $("puntosFisicos").innerHTML=Object.entries(CONFIG.sucursales).map(([k,p])=>`
-    <article class="location-card">
-      <span class="branch-number">0${p.numero}</span>
-      <h3>${escapar(p.nombre)}</h3>
-      <p>${escapar(p.direccion)}</p>
-      <strong>${escapar(p.ciudad)}</strong>
-      <div class="location-info">🕒 ${escapar(p.horario)}</div>
-      <div class="location-info">${estadoDomicilio(k)}</div>
-      <a class="map-button" target="_blank" rel="noopener" href="${p.mapa}">🗺️ Ver ubicación</a>
-      <button class="secondary-btn full" type="button" onclick="seleccionarSucursal('${k}')">Elegir este punto</button>
-    </article>`).join("");
-}
-function actualizarBanner(){
-  const p=puntoActual(), b=$("sucursalActualBanner");
-  if(!p){b.innerHTML="";return;}
-  const s=CONFIG.sucursales[p];
-  b.innerHTML=`📍 <strong>${escapar(s.nombre)}</strong> · ${escapar(s.ciudad)}
-    <br><small>${escapar(s.direccion)} · ${estadoPunto(p)} · ${estadoDomicilio(p)}</small>
-    <button class="link-btn" type="button" onclick="mostrarSelectorSucursal()">Cambiar punto</button>`;
-}
-
-function agregar(id){
-  if(!puntoActual()){ alert("Primero elige una sucursal."); mostrarSelectorSucursal(); return; }
-  const p=producto(id);
-  if(!p || !p.puntos.includes(puntoActual())) return;
-  const item=carrito.find(x=>x.id===id);
-  if(item) item.cantidad++;
-  else carrito.push({id,cantidad:1});
-  guardarCarrito(); renderCarrito(); abrirCarrito();
-}
-function cambiarCantidad(id,delta){
-  const i=carrito.find(x=>x.id===id); if(!i)return;
-  i.cantidad += delta;
-  if(i.cantidad<=0) carrito=carrito.filter(x=>x.id!==id);
-  guardarCarrito(); renderCarrito();
-}
-function eliminar(id){ carrito=carrito.filter(x=>x.id!==id); guardarCarrito(); renderCarrito(); }
-function agregarMasProductos(){ cerrarCarrito(); $("menu").scrollIntoView({behavior:"smooth"}); }
-
-function sucursalDomicilioActual(){
-  return puntoActual();
-}
-function obtenerZonas(ciudad){
-  const suc=sucursalDomicilioActual();
-  if(suc==="Cuba") return Object.keys(CONFIG.tarifasDomicilio.Cuba?.[ciudad]||{});
-  if(suc==="Circunvalar" && ciudad==="Pereira") return Object.keys(CONFIG.tarifasDomicilio.Circunvalar||{});
-  return [];
-}
-function costoDomicilio(){
-  const zona=$("clienteZona")?.value || "";
-  const suc=sucursalDomicilioActual();
-  if(zona==="__OTRO__"){ const d=Number($("clienteDistancia")?.value||0); return d ? 4300+d*1000 : 0; }
-  if(suc==="Cuba") return Number(CONFIG.tarifasDomicilio.Cuba?.[$("clienteCiudad")?.value||""]?.[zona]||0);
-  return Number(CONFIG.tarifasDomicilio[suc]?.[zona]||0);
-}
-function calcular(){
-  const subtotal=carrito.reduce((s,i)=>s+(producto(i.id)?.precio||0)*i.cantidad,0);
-  let empaque=0, domicilio=0;
-  if(modalidadEntrega==="domicilio"){ empaque=carrito.length?CONFIG.cajaPorPedido:0; domicilio=costoDomicilio(); }
-  if(modalidadEntrega==="recoger"){
-    empaque=document.querySelector('input[name="empaque"]:checked')?.value==="caja"?CONFIG.cajaPorPedido:0;
-  }
-  return {subtotal,empaque,domicilio,total:subtotal+empaque+domicilio};
-}
-
-function renderCarrito(){
-  const c=calcular();
-  $("contadorCarrito").textContent=carrito.reduce((s,i)=>s+i.cantidad,0);
-  $("subtotal").textContent=dinero(c.subtotal);
-  $("empaque").textContent=dinero(c.empaque);
-  $("domicilio").textContent=dinero(c.domicilio);
-  $("total").textContent=dinero(c.total);
-  if(!carrito.length){
-    $("carritoItems").innerHTML=`<div class="cart-empty"><div>🛒</div><p>Tu carrito está vacío.</p><small>Agrega productos del menú.</small></div>`;
+/* =========================
+   4. CARRITO
+   ========================= */
+function agregar(id) {
+  if (v4GetPunto() === "Centro") {
+    alert("El Punto 1 — Bombay 3 funciona únicamente como menú. No recibe pedidos ni domicilios.");
     return;
   }
-  $("carritoItems").innerHTML=carrito.map(i=>{
-    const p=producto(i.id);
-    return `<div class="cart-row">
-      <div><h4>${p.icon} ${escapar(p.nombre)}</h4><small>${dinero(p.precio)} c/u</small>
-        <div class="qty"><button type="button" onclick="cambiarCantidad('${p.id}',-1)">−</button><strong>${i.cantidad}</strong><button type="button" onclick="cambiarCantidad('${p.id}',1)">+</button><button class="remove" type="button" onclick="eliminar('${p.id}')">Eliminar</button></div>
-      </div><strong>${dinero(p.precio*i.cantidad)}</strong>
-    </div>`;
+  const p = productosPublicosV4.find(x => x.id === id) || productos.find(x => x.id === id);
+  if (!p) return;
+
+  const item = carrito.find(x => x.id === id);
+  if (item) item.cantidad++;
+  else carrito.push({id, cantidad:1});
+
+  guardarCarrito();
+  renderCarrito();
+  abrirCarrito();
+}
+
+function cambiarCantidad(id, delta) {
+  const item = carrito.find(x => x.id === id);
+  if (!item) return;
+
+  item.cantidad += delta;
+  if (item.cantidad <= 0) carrito = carrito.filter(x => x.id !== id);
+
+  guardarCarrito();
+  renderCarrito();
+}
+
+function eliminar(id) {
+  carrito = carrito.filter(x => x.id !== id);
+  guardarCarrito();
+  renderCarrito();
+}
+
+function calcular() {
+  const subtotal = carrito.reduce((total, item) => {
+    const p = productosPublicosV4.find(x => x.id === item.id) || productos.find(x => x.id === item.id);
+    return total + (p ? p.precio * item.cantidad : 0);
+  }, 0);
+
+  let empaque = 0;
+  let domicilio = 0;
+
+  if (modalidadEntrega === "domicilio") {
+    empaque = carrito.length ? CONFIG.cajaPorPedido : 0;
+    const zona = document.getElementById("clienteZona")?.value || "";
+    const ciudad = document.getElementById("clienteCiudad")?.value || "";
+    const puntoDomicilio = document.getElementById("clienteSucursalDomicilio")?.value || v4GetPunto();
+    domicilio = obtenerTarifaDomicilio(ciudad, zona, puntoDomicilio);
+  }
+
+  if (modalidadEntrega === "recoger") {
+    const empaqueSeleccionado = document.querySelector('input[name="empaque"]:checked')?.value;
+    empaque = empaqueSeleccionado === "caja" ? CONFIG.cajaPorPedido : 0;
+  }
+
+  return {subtotal, empaque, domicilio, total:subtotal + empaque + domicilio};
+}
+
+function renderCarrito() {
+  const box = document.getElementById("carritoItems");
+  const c = calcular();
+
+  document.getElementById("contadorCarrito").textContent =
+    carrito.reduce((s,i) => s + i.cantidad, 0);
+
+  document.getElementById("subtotal").textContent = dinero(c.subtotal);
+  document.getElementById("empaque").textContent = dinero(c.empaque);
+  document.getElementById("domicilio").textContent = dinero(c.domicilio);
+  document.getElementById("total").textContent = dinero(c.total);
+
+  if (!carrito.length) {
+    box.innerHTML = `<div class="cart-empty"><div>🛒</div><p>Tu carrito está vacío.</p><small>Agrega productos del menú para comenzar.</small></div>`;
+    return;
+  }
+
+  box.innerHTML = carrito.map(i => {
+    const p = productosPublicosV4.find(x => x.id === i.id) || productos.find(x => x.id === i.id);
+    if (!p) return "";
+    const imagen = p.imagen
+      ? `<img src="${escapar(p.imagen)}" alt="${escapar(p.nombre)}" loading="lazy">`
+      : `<span class="cart-product-icon">${p.icon || "🥟"}</span>`;
+    const descripcion = p.desc || p.descripcion || "Producto";
+    return `
+      <div class="cart-row">
+        <div class="cart-product-image">${imagen}</div>
+        <div class="cart-product-info">
+          <h4>${escapar(p.nombre)}</h4>
+          <p class="cart-product-description">${escapar(descripcion)}</p>
+          <small class="cart-product-price">${p.cat === "Salsas" ? "Gratis" : (p.precio == null ? "Precio no definido" : dinero(p.precio)+" c/u")}</small>
+          <div class="qty">
+            <button type="button" aria-label="Restar una unidad de ${escapar(p.nombre)}" onclick="cambiarCantidad('${p.id}',-1)">−</button>
+            <strong>${i.cantidad}</strong>
+            <button type="button" aria-label="Sumar una unidad de ${escapar(p.nombre)}" onclick="cambiarCantidad('${p.id}',1)">+</button>
+            <button type="button" class="remove" onclick="eliminar('${p.id}')">Eliminar</button>
+          </div>
+        </div>
+        <strong class="cart-item-total">${p.cat === "Salsas" ? "Gratis" : (p.precio == null ? "—" : dinero(p.precio * i.cantidad))}</strong>
+      </div>
+    `;
   }).join("");
 }
-function abrirCarrito(){renderCarrito();$("overlayCarrito").classList.remove("hidden");}
-function cerrarCarrito(){$("overlayCarrito").classList.add("hidden");}
-function cerrarSiOverlay(e){if(e.target.id==="overlayCarrito")cerrarCarrito();}
 
-function abrirCheckout(){
-  if(!carrito.length){alert("Agrega al menos un producto.");return;}
-  cerrarCarrito();
-  modalidadEntrega="";
-  pedidoActual=null;
-  $("pedidoForm").reset();
-  $("formEntrega").classList.add("hidden");
-  $("resumenInicial").innerHTML=resumenInicialHTML();
-  mostrarPaso("checkoutPaso0");
-  $("overlayCheckout").classList.remove("hidden");
+function abrirCarrito() {
+  document.getElementById("overlayCarrito").classList.remove("hidden");
+}
+function cerrarCarrito() {
+  document.getElementById("overlayCarrito").classList.add("hidden");
+}
+function cerrarSiOverlay(e) {
+  if (e.target.id === "overlayCarrito") cerrarCarrito();
 }
 
-function irADatosEntrega(){
-  if(!carrito.length){cerrarCheckout();alert("El carrito está vacío.");return;}
+/* =========================
+   5. CHECKOUT
+   ========================= */
+function abrirCheckout() {
+  if (v4GetPunto() === "Centro") {
+    alert("El Punto 1 — Bombay 3 funciona únicamente como menú. No se pueden realizar pedidos desde este punto.");
+    return;
+  }
+  if (!carrito.length) {
+    alert("Agrega al menos un producto al carrito.");
+    return;
+  }
+
+  cerrarCarrito();
+  document.getElementById("overlayCheckout").classList.remove("hidden");
+  document.getElementById("resumenInicial").innerHTML = resumenCarritoHTML();
+  mostrarPaso("checkoutPaso0");
+}
+
+function cerrarCheckout() {
+  document.getElementById("overlayCheckout").classList.add("hidden");
+}
+
+function mostrarPaso(id) {
+  ["checkoutPaso0","checkoutPaso1","checkoutPaso2","checkoutPasoPago","checkoutResultado"].forEach(x => {
+    const el = document.getElementById(x);
+    if (el) el.classList.add("hidden");
+  });
+  const actual = document.getElementById(id);
+  if (actual) actual.classList.remove("hidden");
+}
+
+function irADatosEntrega() {
   mostrarPaso("checkoutPaso1");
 }
 
-function resumenInicialHTML(){
-  const c=calcular();
-  const p=puntoActual();
-  return `<div class="invoice-head">
-    <div><h3>🥟 Empanadas Que Rico</h3><span class="invoice-number">PRE-FACTURA · Pedido pendiente de datos</span></div>
-    <strong>Resumen</strong>
-  </div>
-  <div class="invoice-items">${carrito.map(i=>{
-    const x=producto(i.id);
-    return `<div class="invoice-item"><span>${i.cantidad} × ${escapar(x.nombre)}</span><strong>${dinero(x.precio*i.cantidad)}</strong></div>`;
-  }).join("")}</div>
-  <div class="invoice-totals">
-    <div class="summary-line"><span>Productos</span><strong>${dinero(c.subtotal)}</strong></div>
-    <div class="summary-line"><span>Empaque</span><strong>Se define en el siguiente paso</strong></div>
-    <div class="summary-line"><span>Domicilio</span><strong>Se calcula según la zona</strong></div>
-    <div class="invoice-total"><span>Subtotal productos</span><strong>${dinero(c.subtotal)}</strong></div>
-  </div>
-  <div class="invoice-note">📍 ${p ? `Sucursal seleccionada: <strong>${escapar(CONFIG.sucursales[p]?.nombre || p)}</strong>` : "Selecciona una sucursal para continuar."}<br>ℹ️ El total final aparecerá en la factura después de elegir modalidad, empaque y zona.</div>`;
-}
-function cerrarCheckout(){$("overlayCheckout").classList.add("hidden");}
-function mostrarPaso(id){
-  ["checkoutPaso0","checkoutPaso1","checkoutPaso2","checkoutPasoPago","checkoutResultado"].forEach(x=>$(x).classList.add("hidden"));
-  $(id).classList.remove("hidden");
-}
+function seleccionarEntrega(tipo) {
+  modalidadEntrega = tipo;
 
-function seleccionarEntrega(tipo){
-  modalidadEntrega=tipo;
-  $("formEntrega").classList.remove("hidden");
-  $("camposDomicilio").classList.toggle("hidden",tipo!=="domicilio");
-  $("camposRecoger").classList.toggle("hidden",tipo!=="recoger");
-  $("clienteCiudad").required=tipo==="domicilio";
-  $("clienteZona").required=tipo==="domicilio";
-  $("clienteDireccion").required=tipo==="domicilio";
-  $("clienteSucursal").required=tipo==="recoger";
-  $("resumenModalidad").innerHTML=tipo==="domicilio"
-    ?"🛵 <strong>Domicilio.</strong> La caja es obligatoria ($2.500)."
-    :"🏪 <strong>Recoger en sucursal.</strong> Puedes elegir caja o bolsa.";
-  renderCarrito();
-}
-function cargarZonas(){
-  const z=$("clienteZona"); z.innerHTML='<option value="">Selecciona tu barrio o zona</option>';
-  obtenerZonas($("clienteCiudad").value).forEach(x=>{const o=document.createElement("option");o.value=x;o.textContent=x;z.appendChild(o);});
-  const o=document.createElement("option");
-  o.value="__OTRO__";
-  o.textContent="Otro barrio o zona — no aparece en la lista";
-  z.appendChild(o);
-  actualizarDomicilio();
-}
-function actualizarZonasPorSucursal(){
-  const z=$("clienteZona");
-  const suc=sucursalDomicilioActual();
-  z.innerHTML='<option value="">Selecciona tu barrio o zona</option>';
-  const zonas=obtenerZonas($("clienteCiudad").value);
-  if(!zonas.length && suc==="Cuba"){
-    z.innerHTML='<option value="">Tarifas de domicilio de El Modelo aún no programadas</option>';
-  }else{
-    zonas.forEach(x=>{const o=document.createElement("option");o.value=x;o.textContent=x;z.appendChild(o);});
-    const o=document.createElement("option");
-    o.value="__OTRO__";
-    o.textContent="Otro barrio o zona — no aparece en la lista";
-    z.appendChild(o);
-  }
-  actualizarDomicilio();
-}
-function actualizarDomicilio(){
-  const zona=$("clienteZona")?.value || "";
-  const otro=zona==="__OTRO__";
-  $("zonaNoEncontrada")?.classList.toggle("hidden",!otro);
-  if(!otro){
-    if($("clienteZonaOtro")) $("clienteZonaOtro").value="";
-    if($("clienteDistancia")) $("clienteDistancia").value="";
-  }
-  const v=costoDomicilio();
-  $("valorDomicilio").textContent=dinero(v);
-  $("avisoDomicilio").classList.toggle("hidden",!zona || (otro && !$("clienteDistancia")?.value));
+  document.getElementById("formEntrega").classList.remove("hidden");
+  document.getElementById("camposDomicilio").classList.toggle("hidden", tipo !== "domicilio");
+  document.getElementById("camposRecoger").classList.toggle("hidden", tipo !== "recoger");
+  document.getElementById("avisoCajaDomicilio").classList.toggle("hidden", tipo !== "domicilio");
+
+  document.getElementById("clienteCiudad").required = tipo === "domicilio";
+  document.getElementById("clienteZona").required = tipo === "domicilio";
+  document.getElementById("clienteDireccion").required = tipo === "domicilio";
+  document.getElementById("clienteSucursal").required = tipo === "recoger";
+
+  document.getElementById("resumenModalidad").innerHTML =
+    tipo === "domicilio"
+      ? "🛵 <strong>Domicilio seleccionado.</strong> La caja es obligatoria."
+      : "🏪 <strong>Recoger en sucursal.</strong> Puedes elegir caja o bolsa.";
+
   renderCarrito();
 }
 
-function mostrarPago(e){
+function cargarZonas() {
+  const ciudad = document.getElementById("clienteCiudad").value;
+  const zona = document.getElementById("clienteZona");
+
+  zona.innerHTML = '<option value="">Selecciona tu barrio o zona</option>';
+
+  obtenerZonasPorCiudad(ciudad).forEach(nombre => {
+    const option = document.createElement("option");
+    option.value = nombre;
+    option.textContent = nombre;
+    zona.appendChild(option);
+  });
+
+  actualizarDomicilio();
+}
+
+function actualizarDomicilio() {
+  const zona = document.getElementById("clienteZona")?.value || "";
+  const ciudad = document.getElementById("clienteCiudad")?.value || "";
+  const puntoDomicilio = document.getElementById("clienteSucursalDomicilio")?.value || v4GetPunto();
+  const valor = obtenerTarifaDomicilio(ciudad, zona, puntoDomicilio);
+  const aviso = document.getElementById("avisoDomicilio");
+  if (aviso) aviso.classList.toggle("hidden", !zona);
+  const valorEl = document.getElementById("valorDomicilio");
+  if (valorEl) valorEl.textContent = dinero(valor);
+  renderCarrito();
+}
+
+function mostrarPago(e) {
   e.preventDefault();
-  if(!modalidadEntrega){alert("Selecciona domicilio o recoger.");return;}
-  if(modalidadEntrega==="domicilio"){
-    const suc=puntoActual();
-    if(!suc || !domicilioDisponible(suc)){alert("El punto seleccionado no tiene el domicilio disponible en este momento.");return;}
-    if(suc==="Cuba" && !Object.keys(CONFIG.tarifasDomicilio.Cuba?.[$("clienteCiudad")?.value||""]||{}).length){
-      alert("Los domicilios de Barrio El Modelo todavía no tienen tarifas programadas. Por ahora no se puede continuar con domicilio en este punto.");
+
+  if (!modalidadEntrega) {
+    alert("Selecciona domicilio o recoger en sucursal.");
+    return;
+  }
+
+  if (modalidadEntrega === "domicilio") {
+    const zona = document.getElementById("clienteZona").value;
+    const direccion = document.getElementById("clienteDireccion").value.trim();
+    const sucursalDom = document.getElementById("clienteSucursalDomicilio").value;
+
+    if (!zona || !direccion || !sucursalDom) {
+      alert("Completa ciudad, barrio/zona, dirección y selecciona el punto que prepara el domicilio.");
       return;
     }
-    if($("clienteZona").value==="__OTRO__" && !$("clienteZonaOtro").value.trim()){
-      alert("Escribe el nombre del barrio o zona."); return;
+  }
+
+  if (modalidadEntrega === "recoger") {
+    const sucursal = document.getElementById("clienteSucursal").value;
+    if (!sucursal) {
+      alert("Selecciona la sucursal donde recogerás.");
+      return;
     }
-    if($("clienteZona").value==="__OTRO__" && !$("clienteDistancia").value){
-      alert("Selecciona la distancia aproximada desde el punto."); return;
-    }
-    if(!costoDomicilio()){
-      alert("Selecciona el barrio o zona para calcular el valor del domicilio."); return;
-    }
-  } else if(!$("clienteSucursal").value){alert("Selecciona la sucursal.");return;}
-  const c=calcular();
-  pedidoActual={
-    cliente:{
-      nombre:$("clienteNombre").value.trim(),
-      telefono:$("clienteTelefono").value.trim(),
-      ciudad:$("clienteCiudad").value,
-      zona:$("clienteZona").value==="__OTRO__" ? $("clienteZonaOtro").value.trim() : $("clienteZona").value,
-      zona_no_listada: $("clienteZona").value==="__OTRO__",
-      distancia_aproximada: $("clienteZona").value==="__OTRO__" ? $("clienteDistancia").value : "",
-      direccion:$("clienteDireccion").value.trim(),
-      sucursal:puntoActual(),
-      empaque:document.querySelector('input[name="empaque"]:checked')?.value || "caja",
-      nota:$("clienteNota").value.trim()
-    },
-    modalidad:modalidadEntrega,
-    items:carrito.map(x=>({...x})),
-    ...c
+  }
+
+  pedidoActual = {
+    numero: nuevoNumeroPedido(),
+    cliente: datosCliente(),
+    modalidad: modalidadEntrega,
+    items: carrito.map(i => ({...i})),
+    ...calcular()
   };
-  $("resumenCheckout").innerHTML=resumenHTML();
+
+  document.getElementById("resumenCheckout").innerHTML = resumenCompletoHTML();
   mostrarPaso("checkoutPaso2");
 }
-function volverEntrega(){mostrarPaso("checkoutPaso1");}
-function irAlPago(){renderMetodosPago();mostrarPaso("checkoutPasoPago");}
 
-function resumenHTML(){
-  const p=pedidoActual;
-  const entrega=p.modalidad==="domicilio"
-    ? `🛵 Domicilio<br>Ciudad: ${escapar(p.cliente.ciudad)}<br>Zona: ${escapar(p.cliente.zona)}<br>Dirección: ${escapar(p.cliente.direccion)}<br>Preparado por: ${escapar(CONFIG.sucursales[p.cliente.sucursal]?.nombre || p.cliente.sucursal)}`
-    : `🏪 Recoger en: ${escapar(CONFIG.sucursales[p.cliente.sucursal]?.nombre || p.cliente.sucursal)}`;
-  return `<div class="summary-section"><strong>👤 Cliente</strong><br>${escapar(p.cliente.nombre)} · ${escapar(p.cliente.telefono)}</div>
-  <div class="summary-section"><strong>📍 Entrega</strong><br>${entrega}</div>
-  <div class="summary-section"><strong>🍽️ Productos</strong>${p.items.map(i=>{const x=producto(i.id);return `<div class="summary-line"><span>${i.cantidad} × ${escapar(x.nombre)}</span><strong>${dinero(x.precio*i.cantidad)}</strong></div>`}).join("")}</div>
-  <div class="summary-line"><span>Empaque</span><strong>${dinero(p.empaque)}</strong></div>
-  <div class="summary-line"><span>Domicilio</span><strong>${dinero(p.domicilio)}</strong></div>
-  <div class="summary-line total"><span>TOTAL</span><strong>${dinero(p.total)}</strong></div>
-  <div class="summary-section"><strong>📝 Observaciones:</strong> ${escapar(p.cliente.nota)}</div>`;
+function volverEntrega() {
+  mostrarPaso("checkoutPaso1");
 }
 
-function mensajePedido(){
-  const p=pedidoActual, modalidad=p.modalidad==="domicilio"?"🛵 DOMICILIO":"🏪 RECOGER EN SUCURSAL";
-  return `*EMPANADAS QUE RICO — PEDIDO #${p.numero_pedido}*
+function irAlPago() {
+  const opciones = document.getElementById("paymentOptions");
+  if (opciones) {
+    opciones.innerHTML = `
+      <button class="payment-card" type="button" onclick="seleccionarPago('transferencia')">
+        <span>🏦</span><strong>Transferencia / Nequi</strong><small>Paga el total y envía el comprobante por WhatsApp.</small>
+      </button>
+      <button class="payment-card" type="button" onclick="seleccionarPago('efectivo')">
+        <span>💵</span><strong>Efectivo</strong><small>Paga al recibir o al recoger tu pedido.</small>
+      </button>`;
+  }
+  mostrarPaso("checkoutPasoPago");
+}
+
+function datosCliente() {
+  return {
+    nombre: document.getElementById("clienteNombre").value.trim(),
+    telefono: document.getElementById("clienteTelefono").value.trim(),
+    direccion: document.getElementById("clienteDireccion").value.trim(),
+    ciudad: document.getElementById("clienteCiudad").value,
+    zona: document.getElementById("clienteZona").value,
+    sucursal: modalidadEntrega === "domicilio"
+      ? document.getElementById("clienteSucursalDomicilio").value
+      : document.getElementById("clienteSucursal").value,
+    empaque: document.querySelector('input[name="empaque"]:checked')?.value || "caja",
+    nota: document.getElementById("clienteNota").value.trim()
+  };
+}
+
+function nuevoNumeroPedido() {
+  const n = Number(localStorage.getItem("ultimoPedidoEmpanadasQueRico") || "0") + 1;
+  localStorage.setItem("ultimoPedidoEmpanadasQueRico", String(n));
+  return String(n).padStart(6,"0");
+}
+
+function listaPedidoTexto() {
+  return pedidoActual.items.map(i => {
+    const p = productosPublicosV4.find(x => x.id === i.id) || productos.find(x => x.id === i.id);
+    return p.cat === "Salsas"
+      ? `${i.cantidad} x ${p.nombre} — Gratis`
+      : `${i.cantidad} x ${p.nombre} — ${dinero(p.precio)} c/u = ${dinero(p.precio * i.cantidad)}`;
+  }).join("\n");
+}
+
+function resumenCarritoHTML() {
+  const c = calcular();
+  const items = carrito.map(i => {
+    const x = productosPublicosV4.find(y => y.id === i.id) || productos.find(y => y.id === i.id);
+    if (!x) return "";
+    const imagen = x.imagen
+      ? `<img src="${escapar(x.imagen)}" alt="${escapar(x.nombre)}">`
+      : `<span>${escapar(x.icon || "🥟")}</span>`;
+    return `<div class="receipt-product">
+      <div class="receipt-product-image">${imagen}</div>
+      <div class="receipt-product-info">
+        <strong>${escapar(x.nombre)}</strong>
+        <p>${escapar(x.desc || x.descripcion || "Producto")}</p>
+        <small>${x.cat === "Salsas" ? `${i.cantidad} × Gratis = <b>Gratis</b>` : `${i.cantidad} × ${dinero(x.precio)} = <b>${dinero(x.precio*i.cantidad)}</b>`}</small>
+      </div>
+    </div>`;
+  }).join("");
+  return `<div class="receipt-head"><div><strong>🧾 RECIBO DEL PEDIDO</strong><small>Revisa todo antes de continuar.</small></div><strong>${carrito.reduce((s,i)=>s+i.cantidad,0)} producto(s)</strong></div>
+    <div class="receipt-products">${items}</div>
+    <div class="invoice-totals">
+      <div class="summary-line"><span>Productos</span><strong>${dinero(c.subtotal)}</strong></div>
+      <div class="summary-line"><span>Empaque</span><strong>${dinero(c.empaque)}</strong></div>
+      <div class="summary-line"><span>Domicilio</span><strong>${dinero(c.domicilio)}</strong></div>
+      <div class="invoice-total"><span>TOTAL</span><strong>${dinero(c.total)}</strong></div>
+    </div>`;
+}
+
+function resumenCompletoHTML() {
+  const p = pedidoActual;
+  const c = p;
+
+  const entrega = p.modalidad === "domicilio"
+    ? `🛵 Domicilio<br>Ciudad: ${escapar(p.cliente.ciudad)}<br>Zona: ${escapar(p.cliente.zona)}<br>Dirección: ${escapar(p.cliente.direccion)}`
+    : `🏪 Recoger en sucursal: ${escapar(p.cliente.sucursal)}`;
+
+  return `
+    <div class="summary-section"><strong>🧾 Pedido #${escapar(p.numero)}</strong></div>
+    <div class="summary-section"><strong>👤 Cliente:</strong> ${escapar(p.cliente.nombre)}<br>📱 ${escapar(p.cliente.telefono)}</div>
+    <div class="summary-section"><strong>📍 Entrega</strong><br>${entrega}</div>
+    <div class="summary-section"><strong>🍽️ Productos</strong><div class="receipt-products">${p.items.map(i => {
+      const x = productosPublicosV4.find(y => y.id === i.id) || productos.find(y => y.id === i.id);
+      if (!x) return "";
+      const imagen = x.imagen ? `<img src="${escapar(x.imagen)}" alt="${escapar(x.nombre)}">` : `<span>${escapar(x.icon || "🥟")}</span>`;
+      return `<div class="receipt-product"><div class="receipt-product-image">${imagen}</div><div class="receipt-product-info"><strong>${escapar(x.nombre)}</strong><p>${escapar(x.desc || x.descripcion || "Producto")}</p><small>${i.cantidad} × ${dinero(x.precio)} = <b>${dinero(x.precio*i.cantidad)}</b></small></div></div>`;
+    }).join("")}</div></div>
+    <div class="summary-line"><span>Empaque</span><strong>${p.cliente.empaque === "bolsa" && p.modalidad === "recoger" ? "Bolsa — $0" : "Caja — " + dinero(c.empaque)}</strong></div>
+    <div class="summary-line"><span>Domicilio</span><strong>${dinero(c.domicilio)}</strong></div>
+    <div class="summary-line total"><span>TOTAL</span><strong>${dinero(c.total)}</strong></div>
+  `;
+}
+
+/* =========================
+   6. PAGOS + WHATSAPP
+   ========================= */
+function seleccionarPago(metodo) {
+  pedidoActual.metodo = metodo;
+
+  if (metodo === "transferencia") {
+    const esProvidencia = pedidoActual?.cliente?.sucursal === "Circunvalar";
+    const datosTransferencia = `
+      <div class="payment-info">
+        <h3>🏦 Datos para transferencia</h3>
+        <p>Transfiere exactamente <strong>${dinero(pedidoActual.total)}</strong>.</p>
+        <div class="bank-data">
+          ${esProvidencia ? `
+            <div><span>Cuenta</span><strong>Ahorros Bancolombia</strong></div>
+            <div><span>Número de cuenta</span><strong>72500010039</strong></div>
+            <div><span>Nombre de la cuenta</span><strong>Que Rico 3</strong></div>
+            <div><span>Titular</span><strong>Maribel Rico</strong></div>
+            <div><span>Llave de Bre-B</span><strong>0092338157</strong></div>
+            <div><span>Nombre de la llave</span><strong>Que Rico 3</strong></div>
+            <div><span>Nequi</span><strong>320 9321767</strong></div>
+            <div><span>Nombre de Nequi</span><strong>Marco Alfredo Rico</strong></div>
+          ` : `
+            <div><span>Nequi</span><strong>314 897 8258</strong></div>
+            <div><span>Llave</span><strong>314 897 8258</strong></div>
+            <div><span>A nombre de</span><strong>Maribel Rico Ceballos</strong></div>
+          `}
+        </div>
+        <p class="warning">Después del pago, envía el comprobante por WhatsApp. El pedido quedará 🟡 EN VERIFICACIÓN hasta que el negocio lo valide.</p>
+      </div>`;
+
+    document.getElementById("checkoutResultado").innerHTML = `
+      ${datosTransferencia}
+      <button class="primary-btn full" onclick="enviarPedidoYComprobante()">📲 Enviar pedido y comprobante</button>
+      <button class="secondary-btn full" onclick="mostrarReciboPendiente()">Ver resumen</button>`;
+  } else {
+    document.getElementById("checkoutResultado").innerHTML = `
+      <div class="success">
+        <div class="success-icon">🧾</div>
+        <span class="order-code">Pedido #${pedidoActual.numero}</span>
+        <h2>Pedido listo para enviar</h2>
+        ${resumenCompletoHTML()}
+        <p><strong>💵 Total a pagar: ${dinero(pedidoActual.total)}</strong></p>
+      </div>
+      <button class="primary-btn full" onclick="enviarPedidoEfectivo()">📲 Enviar pedido al WhatsApp</button>`;
+  }
+
+  mostrarPaso("checkoutResultado");
+}
+
+function numeroWhatsAppParaPedido() {
+  if (pedidoActual.modalidad === "recoger") {
+    const sucursal = CONFIG.sucursales[pedidoActual.cliente.sucursal];
+    return CONFIG.whatsapp[sucursal.whatsapp];
+  }
+
+  // Domicilios solo para puntos 2 y 3.
+  const sucursal = CONFIG.sucursales[pedidoActual.cliente.sucursal];
+  if (sucursal) return CONFIG.whatsapp[sucursal.whatsapp];
+
+  // Si no se eligió sucursal para domicilio, por defecto se informa al punto 2.
+  return CONFIG.whatsapp.punto2;
+}
+
+function mensajePedido(estadoPago) {
+  const p = pedidoActual;
+  const modalidad = p.modalidad === "domicilio" ? "🛵 DOMICILIO" : "🏪 RECOGER EN SUCURSAL";
+
+  return `*EMPANADAS QUE RICO — PEDIDO #${p.numero}*
 
 👤 *CLIENTE*
 Nombre: ${p.cliente.nombre}
@@ -576,210 +580,792 @@ Teléfono: ${p.cliente.telefono}
 
 📍 *ENTREGA*
 Modalidad: ${modalidad}
-${p.modalidad==="domicilio"
-?`Ciudad: ${p.cliente.ciudad}
+${p.modalidad === "domicilio"
+  ? `Ciudad: ${p.cliente.ciudad}
 Zona: ${p.cliente.zona}
-Dirección: ${p.cliente.direccion}
-Punto que prepara/envía: ${CONFIG.sucursales[p.cliente.sucursal]?.nombre || p.cliente.sucursal}`
-:`Sucursal: ${CONFIG.sucursales[p.cliente.sucursal]?.nombre || p.cliente.sucursal}`}
+Dirección: ${p.cliente.direccion}`
+  : `Sucursal: ${p.cliente.sucursal}`}
 
 🍽️ *PRODUCTOS*
-${p.items.map(i=>{const x=producto(i.id);return `${i.cantidad} x ${x.nombre} — ${dinero(x.precio*i.cantidad)}`}).join("\n")}
+${listaPedidoTexto()}
 
-📦 Empaque: ${p.empaque?`Caja — ${dinero(p.empaque)}`:"Bolsa — $0"}
+📦 Empaque: ${p.cliente.empaque === "bolsa" && p.modalidad === "recoger" ? "Bolsa — $0" : "Caja — " + dinero(p.empaque)}
 🛵 Domicilio: ${dinero(p.domicilio)}
 💰 *TOTAL: ${dinero(p.total)}*
-💳 Método: ${p.metodo==="transferencia"?"Transferencia":"Efectivo"}
-🟡 *ESTADO: PENDIENTE DE VERIFICACIÓN*
-📝 Observación: ${p.cliente.nota || "Ninguna"}`;
+
+💳 Método: ${p.metodo === "transferencia" ? "Transferencia" : "Efectivo"}
+🟡 *ESTADO: ${estadoPago}*
+
+📝 Observación: ${p.cliente.nota || "Sin observaciones"}`;
 }
 
-async function guardarPedidoEnNube(){
-  if(!pedidoActual) throw new Error("No existe pedidoActual.");
-  if(pedidoActual.idNube) return pedidoActual;
-  const client=obtenerSupabaseClient();
+function abrirWhatsApp(numero, mensaje) {
+  const url = `https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`;
+  window.open(url, "_blank");
+}
 
-  const payload={
-    p_sucursal: pedidoActual.cliente.sucursal || "",
+async function guardarPedidoEnSupabase() {
+  if (!window.supabase || !window.SUPABASE_CONFIG?.url || !window.SUPABASE_CONFIG?.anonKey) {
+    throw new Error("No está disponible la conexión con Supabase.");
+  }
+  supabasePublico ||= window.supabase.createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.anonKey);
+  if (!pedidoActual?.cliente?.sucursal) throw new Error("No se encontró la sucursal del pedido.");
+
+  const { data, error } = await supabasePublico.rpc("registrar_pedido_publico", {
+    p_sucursal: pedidoActual.cliente.sucursal,
     p_modalidad: pedidoActual.modalidad,
     p_metodo_pago: pedidoActual.metodo,
     p_cliente: pedidoActual.cliente,
     p_items: pedidoActual.items,
-    p_subtotal: Number(pedidoActual.subtotal),
-    p_empaque: Number(pedidoActual.empaque),
-    p_domicilio: Number(pedidoActual.domicilio),
-    p_total: Number(pedidoActual.total)
-  };
+    p_subtotal: pedidoActual.subtotal,
+    p_empaque: pedidoActual.empaque,
+    p_domicilio: pedidoActual.domicilio,
+    p_total: pedidoActual.total
+  });
+  if (error) throw error;
 
-  const {data,error}=await client.rpc("registrar_pedido_publico",payload);
-  if(error){
-    console.error("SUPABASE RPC ERROR:",error);
-    throw new Error(error.message || "Supabase rechazó el pedido.");
-  }
-  const row=Array.isArray(data)?data[0]:data;
-  if(!row?.id) throw new Error("La función de Supabase no devolvió el pedido.");
-  pedidoActual.idNube=row.id;
-  pedidoActual.numero_pedido=row.numero_pedido;
-  pedidoActual.trackingToken=row.tracking_token;
-  pedidoActual.estado=row.estado || "verificacion";
-  localStorage.setItem(`pedido_${row.numero_pedido}`,JSON.stringify({
-    numero:row.numero_pedido,trackingToken:row.tracking_token,estado:row.estado
+  const fila = Array.isArray(data) ? data[0] : data;
+  if (fila?.numero_pedido) pedidoActual.numero = String(fila.numero_pedido);
+  if (fila?.tracking_token) pedidoActual.tracking_token = fila.tracking_token;
+  pedidoActual.estado = fila?.estado || "verificacion";
+  localStorage.setItem(`pedido_${pedidoActual.numero}`, JSON.stringify({
+    estado: pedidoActual.estado,
+    numero: pedidoActual.numero,
+    tracking_token: pedidoActual.tracking_token || null
   }));
-  return pedidoActual;
+  iniciarSeguimiento(pedidoActual.numero);
+  return fila;
 }
 
-function numeroWhatsApp(){
-  return CONFIG.whatsapp[pedidoActual.cliente.sucursal] || CONFIG.whatsapp.Cuba;
-}
-function abrirWhatsApp(mensaje){
-  const url=`https://wa.me/${numeroWhatsApp()}?text=${encodeURIComponent(mensaje)}`;
-  window.location.href=url;
-}
-function mensajeError(e){
-  console.error("REGISTRO DE PEDIDO:",e);
-  const partes=[];
-  if(e?.message) partes.push(e.message);
-  if(e?.code) partes.push("Código: "+e.code);
-  if(e?.details) partes.push("Detalle: "+e.details);
-  if(e?.hint) partes.push("Ayuda: "+e.hint);
-  const detalle=partes.join("\n") || String(e || "Error desconocido");
-  alert("No pudimos registrar el pedido.\n\n"+detalle+"\n\nSi acabas de configurar Supabase, ejecuta COMPLETO el archivo supabase_integracion.sql en SQL Editor y vuelve a probar.");
-}
-
-function metodosPagoSucursal(sucursal){
-  if(sucursal==="Circunvalar") return [
-    {id:"transferencia",icon:"🏦",nombre:"Transferencia",detalle:"Bre-B · Nequi · Bancolombia"},
-    {id:"efectivo",icon:"💵",nombre:"Efectivo",detalle:"Pago al recibir el domicilio"}
-  ];
-  if(sucursal==="Cuba") return [
-    {id:"transferencia",icon:"🏦",nombre:"Transferencia",detalle:"Bre-B · Nequi"},
-    {id:"efectivo",icon:"💵",nombre:"Efectivo",detalle:"Al recibir o recoger"}
-  ];
-  return [
-    {id:"transferencia",icon:"🏦",nombre:"Transferencia",detalle:"Nequi · Bancolombia · Llave"},
-    {id:"efectivo",icon:"💵",nombre:"Efectivo",detalle:"Al recibir o recoger"}
-  ];
-}
-function renderMetodosPago(){
-  const suc=pedidoActual?.cliente?.sucursal || puntoActual();
-  const opciones=metodosPagoSucursal(suc);
-  $("paymentOptions").innerHTML=opciones.map(x=>`<button class="payment-card" type="button" onclick="seleccionarPago('${x.id}')">
-    <span>${x.icon}</span><strong>${x.nombre}</strong><small>${x.detalle}</small>
-  </button>`).join("");
-}
-function datosTransferenciaSucursal(sucursal){
-  if(sucursal==="Circunvalar") return `
-    <div class="bank-data">
-      <div><span>Llave Bre-B</span><strong>0092338157</strong></div>
-      <div><span>Nequi</span><strong>3209321767</strong></div>
-      <div><span>Bancolombia</span><strong>Cuenta de ahorros 72500010039</strong></div>
-    </div>`;
-  if(sucursal==="Cuba") return `
-    <div class="bank-data">
-      <div><span>Llave Bre-B</span><strong>3148978258</strong></div>
-      <div><span>Nequi</span><strong>3148978258</strong></div>
-      <div><span>Nombre de cuenta</span><strong>Maribel Rico Ceballos</strong></div>
-    </div>`;
-  return `<div class="bank-data"><div><span>Banco</span><strong>Bancolombia</strong></div><div><span>Llave</span><strong>CONFIGURA_AQUI_LA_LLAVE</strong></div><div><span>Nequi</span><strong>CONFIGURA_AQUI_EL_NUMERO</strong></div></div>`;
-}
-function seleccionarPago(metodo){
-  pedidoActual.metodo=metodo;
-  if(metodo==="transferencia"){
-    $("checkoutResultado").innerHTML=`<div class="payment-info"><h3>🏦 Datos para transferencia</h3>
-      <p>Transfiere exactamente <strong>${dinero(pedidoActual.total)}</strong>.</p>
-      ${datosTransferenciaSucursal(pedidoActual.cliente.sucursal)}
-      <p class="warning">Después del pago, envía el comprobante por WhatsApp.</p></div>
-      <button class="primary-btn full" type="button" onclick="enviarPedido()">📲 Registrar pedido y enviar comprobante</button>`;
-  }else{
-    $("checkoutResultado").innerHTML=`<div class="success"><div class="success-icon">🧾</div><h2>Pedido listo</h2>${resumenHTML()}</div>
-      <button class="primary-btn full" type="button" onclick="enviarPedido()">📲 Registrar pedido y enviar a WhatsApp</button>`;
+async function enviarPedidoYComprobante() {
+  const boton = event?.currentTarget;
+  if (boton) { boton.disabled = true; boton.textContent = "Guardando pedido…"; }
+  try {
+    await guardarPedidoEnSupabase();
+    const numero = numeroWhatsAppParaPedido();
+    abrirWhatsApp(numero, mensajePedido("PAGO REALIZADO — COMPROBANTE PENDIENTE DE VERIFICACIÓN") +
+      "\n\n⚠️ *ADJUNTA AQUÍ EL COMPROBANTE DE TRANSFERENCIA.*");
+    mostrarPantallaVerificacion();
+  } catch (error) {
+    console.error("No se pudo registrar el pedido en Supabase:", error);
+    alert("No pudimos registrar el pedido en el sistema. No se enviará todavía por WhatsApp.\n\nDetalle: " + (error?.message || "Error desconocido"));
+    if (boton) { boton.disabled = false; boton.textContent = "📲 Enviar pedido y comprobante"; }
   }
-  mostrarPaso("checkoutResultado");
 }
 
-async function enviarPedido(){
-  try{
-    await guardarPedidoEnNube();
-    const extra=pedidoActual.metodo==="transferencia"
-      ? "\n\n⚠️ *ADJUNTA AQUÍ EL COMPROBANTE DE TRANSFERENCIA.*"
-      : "";
-    abrirWhatsApp(mensajePedido()+extra);
-    mostrarPantallaFinal();
-  }catch(e){mensajeError(e);}
+async function enviarPedidoEfectivo() {
+  const boton = event?.currentTarget;
+  if (boton) { boton.disabled = true; boton.textContent = "Guardando pedido…"; }
+  try {
+    await guardarPedidoEnSupabase();
+    abrirWhatsApp(numeroWhatsAppParaPedido(), mensajePedido("PAGO EN EFECTIVO — PENDIENTE DE ENTREGA"));
+    mostrarPantallaVerificacion("efectivo");
+  } catch (error) {
+    console.error("No se pudo registrar el pedido en Supabase:", error);
+    alert("No pudimos registrar el pedido en el sistema. No se enviará todavía por WhatsApp.\n\nDetalle: " + (error?.message || "Error desconocido"));
+    if (boton) { boton.disabled = false; boton.textContent = "📲 Enviar pedido al WhatsApp"; }
+  }
 }
-function mostrarPantallaFinal(){
-  $("checkoutResultado").innerHTML=`<div class="verification-screen">
-    <div class="status-icon yellow">🟡</div>
-    <span class="order-code">Pedido #${escapar(pedidoActual.numero_pedido)}</span>
-    <h2>Pedido registrado</h2>
-    <div class="invoice-card">${resumenHTML()}</div>
-    <p>Tu pedido fue guardado correctamente y está pendiente de verificación.</p>
-    <p>Guarda tu número de pedido para consultar el estado.</p>
-    <button class="secondary-btn full" type="button" onclick="copiarSeguimiento()">🔗 Copiar seguimiento</button>
-    <button class="primary-btn full" type="button" onclick="finalizarPedido()">Finalizar</button>
+
+function mostrarPantallaVerificacion(metodo = "transferencia") {
+  const url = crearEnlaceSeguimiento("verificacion");
+
+  document.getElementById("checkoutResultado").innerHTML = `
+    <div class="verification-screen">
+      <div class="status-icon yellow">🟡</div>
+      <span class="order-code">Pedido #${pedidoActual.numero}</span>
+      <h2>Pedido en verificación</h2>
+      <p>Tu pedido fue enviado al negocio.</p>
+      <p>${metodo === "transferencia"
+        ? "Recibimos el aviso de pago. El negocio verificará el comprobante antes de validar el pedido."
+        : "El pedido fue recibido y el negocio continuará con la preparación."}</p>
+      <div class="status-note">No cierres esta información si necesitas consultar el número de pedido.</div>
+      <button class="secondary-btn full" onclick="copiarSeguimiento()">🔗 Copiar enlace de seguimiento</button>
+      <button class="primary-btn full" onclick="cerrarYLimpiar()">Finalizar</button>
+    </div>`;
+
+  localStorage.setItem(`pedido_${pedidoActual.numero}`, JSON.stringify({
+    estado: "verificacion",
+    numero: pedidoActual.numero
+  }));
+}
+
+function mostrarReciboPendiente() {
+  document.getElementById("checkoutResultado").innerHTML = `
+    <div class="receipt">
+      <span class="eyebrow">Pedido #${pedidoActual.numero}</span>
+      <h2>Resumen</h2>
+      ${resumenCompletoHTML()}
+      <p>🟡 Estado: en verificación después de enviar el comprobante.</p>
+    </div>
+    <button class="primary-btn full" onclick="enviarPedidoYComprobante()">📲 Enviar comprobante</button>`;
+}
+
+function cerrarYLimpiar() {
+  carrito = [];
+  guardarCarrito();
+  renderCarrito();
+  cerrarCheckout();
+  modalidadEntrega = null;
+}
+
+/* =========================
+   7. SEGUIMIENTO
+   ========================= */
+let seguimientoTimer = null;
+let seguimientoNumero = null;
+
+function crearEnlaceSeguimiento(estado = "verificacion") {
+  const base = window.location.href.split("#")[0].split("?")[0];
+  return `${base}?pedido=${encodeURIComponent(pedidoActual.numero)}#seguimientoPedido`;
+}
+
+function detenerSeguimiento(){
+  if(seguimientoTimer){ clearInterval(seguimientoTimer); seguimientoTimer=null; }
+  seguimientoNumero=null;
+}
+
+async function obtenerEstadoPedido(numero){
+  const {data,error}=await supabasePublico.rpc("consultar_pedido_por_numero",{p_numero:String(numero)});
+  if(error) throw error;
+  const fila=Array.isArray(data)?data[0]:data;
+  return fila||null;
+}
+
+async function actualizarSeguimiento(numero, mostrarError=false){
+  try{
+    const fila=await obtenerEstadoPedido(numero);
+    if(!fila){
+      if(mostrarError) alert("No encontramos ese pedido. Verifica el número e inténtalo de nuevo.");
+      return;
+    }
+    const estado=fila.estado||"verificacion";
+    const guardado=JSON.parse(localStorage.getItem(`pedido_${numero}`)||"null")||{};
+    localStorage.setItem(`pedido_${numero}`,JSON.stringify({
+      ...guardado, estado, numero:String(numero)
+    }));
+    mostrarEstadoPedido(numero,estado,fila.motivo_invalido);
+  }catch(error){
+    console.warn("No se pudo consultar el estado del pedido.",error);
+    if(mostrarError) alert("No pudimos consultar el estado del pedido. Inténtalo nuevamente.\n\nDetalle: "+(error?.message||"Error desconocido"));
+  }
+}
+
+function iniciarSeguimiento(numero){
+  detenerSeguimiento();
+  seguimientoNumero=String(numero);
+  actualizarSeguimiento(seguimientoNumero);
+  // Consulta periódica segura mediante RPC. No expone públicamente todos los pedidos.
+  seguimientoTimer=setInterval(()=>actualizarSeguimiento(seguimientoNumero),5000);
+}
+
+async function consultarPedido() {
+  const numero = document.getElementById("consultaPedido").value.trim().replace("#","");
+  if (!numero) {
+    alert("Escribe el número de pedido.");
+    return;
+  }
+  await actualizarSeguimiento(numero,true);
+  iniciarSeguimiento(numero);
+}
+
+function mostrarEstadoPedido(numero, estado, motivo=null) {
+  const card = document.getElementById("estadoPedidoCard");
+  const data = {
+    verificacion: {icon:"🟡", clase:"yellow", titulo:"Pedido en verificación", texto:"Recibimos tu pedido. El negocio está verificando la información."},
+    validado: {icon:"🟢", clase:"green", titulo:"¡Pedido validado!", texto:"El negocio validó tu pedido. Puedes continuar con el proceso de preparación y entrega."},
+    preparacion: {icon:"👨‍🍳", clase:"green", titulo:"Pedido en preparación", texto:"Tu pedido está siendo preparado."},
+    en_domicilio: {icon:"🛵", clase:"green", titulo:"Pedido en domicilio", texto:"Tu pedido salió para entrega."},
+    entregado: {icon:"✅", clase:"green", titulo:"¡Pedido entregado!", texto:"Tu pedido fue entregado correctamente."},
+    rechazado: {icon:"🔴", clase:"red", titulo:"Pedido rechazado", texto:motivo ? `El negocio no pudo validar el pedido: ${motivo}` : "El negocio no pudo validar el pedido. Comunícate con el punto correspondiente."}
+  };
+  const e = data[estado] || data.verificacion;
+  card.innerHTML = `
+    <div class="status-icon ${e.clase}">${e.icon}</div>
+    <span class="order-code">Pedido #${escapar(numero)}</span>
+    <h3>${e.titulo}</h3>
+    <p>${escapar(e.texto)}</p>
+  `;
+  card.scrollIntoView({behavior:"smooth",block:"center"});
+}
+
+function copiarSeguimiento() {
+  if(!pedidoActual?.numero){ alert("Primero debes tener un pedido registrado."); return; }
+  const url = crearEnlaceSeguimiento();
+  navigator.clipboard?.writeText(url).then(() => alert("Enlace de seguimiento copiado."));
+}
+
+function cargarEstadoDesdeURL() {
+  const q = new URLSearchParams(window.location.search);
+  const pedido = q.get("pedido");
+  if (pedido) {
+    document.getElementById("consultaPedido").value = pedido;
+    iniciarSeguimiento(pedido);
+  }
+}
+
+/* =========================
+   8. INICIO
+   ========================= */
+// Inicialización segura: esperar a que exista el DOM antes de tocar #menuContainer y el carrito.
+function inicializarIndexBase(){
+  renderMenu();
+  renderCarrito();
+  cargarEstadoDesdeURL();
+}
+if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", inicializarIndexBase);
+else inicializarIndexBase();
+
+
+/* =========================================================
+   SUCURSAL DE DESTINO: DOMICILIO = SUCURSAL 2 O 3
+   ========================================================= */
+(function () {
+  const sucursal = document.getElementById('sucursalDestino');
+  const bloque = document.getElementById('sucursalEntrega');
+
+  if (!sucursal || !bloque) return;
+
+  function textoNormalizado(v) {
+    return String(v || '').toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+
+  function esDomicilio() {
+    const radios = document.querySelectorAll(
+      'input[type="radio"][name*="entrega" i], input[type="radio"][name*="delivery" i], input[type="radio"]'
+    );
+    for (const r of radios) {
+      if (r.checked) {
+        const t = textoNormalizado(r.value + ' ' + r.id + ' ' + r.parentElement?.textContent);
+        if (t.includes('domicilio')) return true;
+      }
+    }
+    return textoNormalizado(document.body.textContent).includes('domicilio') &&
+           !!document.querySelector('#domicilio, #datosDomicilio, .datos-domicilio');
+  }
+
+  function actualizarSucursal() {
+    const domicilio = esDomicilio();
+    bloque.style.display = domicilio ? '' : 'none';
+    if (!domicilio) sucursal.value = '';
+  }
+
+  document.addEventListener('change', actualizarSucursal);
+  actualizarSucursal();
+
+  // Expose the value so the existing order/WhatsApp logic can use it.
+  window.obtenerSucursalDestino = function () {
+    return sucursal.value || '';
+  };
+})();
+
+/* Añade la sucursal al texto final de WhatsApp cuando sea necesario. */
+window.agregarSucursalAlMensaje = function (mensaje) {
+  const s = window.obtenerSucursalDestino ? window.obtenerSucursalDestino() : '';
+  if (!s) return mensaje;
+  return String(mensaje) + "\n🏪 Sucursal de preparación/envío: " + s;
+};
+
+/* =========================================================
+   EMPANADAS QUE RICO V4 — SUCURSALES, HORARIOS Y MENÚS
+   ========================================================= */
+const V4_PUNTOS = {
+  Centro: {
+    numero: 1, nombre: "Punto 1 — Bombay 3", ciudad:"Dosquebradas, Risaralda",
+    direccion:"Manzana 10, Casa 16, Bombay 3",
+    horario:"Lunes a sábado desde las 3:00 PM", domicilios:false,
+    mapa:"https://www.google.com/maps/search/?api=1&query=Manzana+10+Casa+16+Bombay+3+Dosquebradas+Risaralda"
+  },
+  Cuba: {
+    numero: 2, nombre: "Punto 2 — Barrio El Modelo", ciudad:"Dosquebradas, Risaralda",
+    direccion:"Calle 49 # 19-27, Barrio El Modelo",
+    horario:"Lunes a sábado desde las 2:00 PM", domicilios:true,
+    mapa:"https://www.google.com/maps/search/?api=1&query=Calle+49+19-27+Barrio+El+Modelo+Dosquebradas+Risaralda"
+  },
+  Circunvalar: {
+    numero: 3, nombre: "Punto 3 — Barrio Providencia", ciudad:"Pereira, Risaralda",
+    direccion:"Carrera 20 # 21-26, Barrio Providencia",
+    horario:"Lunes a sábado desde las 3:00 PM", domicilios:true,
+    mapa:"https://www.google.com/maps/search/?api=1&query=Carrera+20+21-26+Barrio+Providencia+Pereira+Risaralda"
+  }
+};
+
+const V4_HORARIOS = {
+  Centro:{inicio:15*60, domicilioInicio:null},
+  Cuba:{inicio:14*60, domicilioInicio:15*60},
+  Circunvalar:{inicio:15*60, domicilioInicio:15*60}
+};
+
+const V4_SALSAS = [
+  ["salsa-pimenton","Pimentón","Salsa para acompañar.",null],
+  ["salsa-aji","Aji","Salsa para acompañar.",null],
+  ["salsa-jalapeno","Jalapeño","Salsa para acompañar.",null],
+  ["salsa-miel-jalapeno","miel de jalapeño","Salsa para acompañar.",null],
+  ["salsa-guacamole-picante","Guacamole picante","Salsa para acompañar.",null],
+  ["salsa-miel-mostaza-picante","Miel mostaza picante","Salsa para acompañar.",null],
+  ["salsa-miel-mostaza","Miel mostaza","Salsa para acompañar.",null],
+  ["salsa-pina-picante","Piña picante","Salsa para acompañar.",null],
+  ["salsa-pina","Piña","Salsa para acompañar.",null],
+  ["salsa-aji-puro","Aji puro","Salsa para acompañar.",null],
+  ["salsa-mayonesa-jalapeno","mayonesa jalapeño","Salsa para acompañar.",null],
+  ["salsa-queso","Queso","Salsa para acompañar.",null],
+  ["salsa-maiz","Maíz","Salsa para acompañar.",null],
+  ["salsa-rosada","Rosada","Salsa para acompañar.",null],
+  ["salsa-tartara","Tártara","Salsa para acompañar.",null],
+  ["salsa-crema-lena","Crema de leña","Salsa para acompañar.",null],
+  ["salsa-maracuya","Maracuyá","Salsa para acompañar.",null],
+  ["salsa-maracuya-picante","Maracuyá picante","Salsa para acompañar.",null],
+  ["salsa-guacamole","Guacamole","Salsa para acompañar.",null],
+  ["salsa-tocineta","Tocineta","Salsa para acompañar.",null],
+  ["salsa-rosada-pepinillos","Rosada con pepinillos","Salsa para acompañar.",null],
+  ["salsa-mora","Mora","Salsa para acompañar.",null],
+  ["salsa-ochua","Ochua","Salsa para acompañar.",null],
+  ["salsa-mayomostaza","Mayomostaza","Salsa para acompañar.",null],
+  ["salsa-bbq","BBQ","Salsa para acompañar.",null],
+  ["salsa-ajo","Ajo","Salsa para acompañar.",null],
+  ["salsa-ceviche","Ceviche","Salsa para acompañar.",null],
+  ["salsa-ceviche-picante","Ceviche picante","Salsa para acompañar.",null],
+  ["salsa-encurtido","Encurtido","Salsa para acompañar.",null],
+  ["salsa-cilantro","Cilantro","Salsa para acompañar.",null]
+];
+const V4_GASEOSAS = [
+  ["jugo-del-valle-mango-fresa-500","MANGO FRESA 500ML","Jugo Del Valle.",5000],
+  ["jugo-del-valle-mango-500","MANGO 500ML","Jugo Del Valle.",5000],
+  ["jugo-del-valle-salpicon-500","SALPICON 500ML","Jugo Del Valle.",5000],
+  ["power-mountain-blast-500","POWER MOUNTAIN BLAST 500ML","Bebida Power.",5000],
+  ["power-frutas-tropicales-500","POWER FRUTAS TROPICALES 500ML","Bebida Power.",5000],
+  ["fuzetea-400","FUZETEA 400ML","Bebida fría.",4000],
+  ["coca-cola-original-400","COCA-COLA ORIGINAL 400ML","Bebida gaseosa.",4000],
+  ["coca-cola-zero-400","COCA-COLA ZERO 400ML","Bebida gaseosa sin azúcar.",4000],
+  ["brisa-agua-pura-1l","BRISA AGUA PURA 1L","Agua.",3000],
+  ["brisa-agua-pura-600","BRISA AGUA PURA 600ML","Agua.",2000],
+  ["brisa-gas-600","BRISA CON GAS 600ML","Agua con gas.",2000],
+  ["brisa-gas-maracuya-600","BRISA CON GAS MARACUYÁ 600ML","Agua con gas.",4000],
+  ["brisa-gas-manzana-600","BRISA CON GAS MANZANA 600ML","Agua con gas.",40000],
+  ["coca-cola-original-1-5l","COCA-COLA ORIGINAL 1.5L","Bebida gaseosa.",7000],
+  ["coca-cola-zero-1-5l","COCA-COLA ZERO 1.5L","Bebida gaseosa sin azúcar.",7000],
+  ["coca-cola-original-1l","COCA-COLA ORIGINAL 1L","Bebida gaseosa.",null],
+  ["avena-casera","AVENA CASERA","Bebida.",5000],
+  ["quatro-original-toronja-400","QUATRO SABOR ORIGINAL TORONJA 400L","Bebida gaseosa.",4000],
+  ["soda-schweppes-400","SODA SCHEPPES 400ML","Bebida gaseosa.",4000],
+  ["premio-rojo-400","PREMIO ROJO 400ML","Bebida gaseosa.",4000],
+  ["sprite-original-400","SPRITE SABOR ORIGINAL LIMA LIMON 400ML","Bebida gaseosa.",4000],
+  ["del-valle-ponche-400","DEL VALLE PONCHE DE FRUTAS 400ML","Jugo Del Valle.",4000],
+  ["del-valle-frutas-criticas-400","DEL VALLE FRUTAS CRITICAS 400ML","Jugo Del Valle.",4000],
+  ["ginger-ale-schweppes-400","GINGER ALE SCHEPPES 400ML","Bebida gaseosa.",4000],
+  ["coca-cola-lata-original-330","COCA-COLA EN LATA ORIGINAL 330ML","Bebida gaseosa.",4000],
+  ["coca-cola-zero-250","COCA-COLA ZERO 250ML","Bebida gaseosa sin azúcar.",3000],
+  ["coca-cola-original-250","COCA-COLA ORIGINAL 250ML","Bebida gaseosa.",3000],
+  ["fanta-naranja-269","FANTA NARANJA 269ML","Bebida gaseosa.",4000],
+  ["fanta-roja-269","FANTA ROJA 269 ML","Bebida gaseosa.",4000],
+  ["brisa-gas-manzana-280","BRISA CON GAS MANZANA 280ML","Agua con gas.",3000],
+  ["brisa-gas-maracuya-280","BRISA CON GAS MARACUYÁ 280ML","Agua con gas.",3000],
+  ["del-valle-ponche-1-5l","DEL VALLE PONCHE DE FRUTAS 1.5L","Jugo Del Valle.",7000],
+  ["del-valle-mango-1-2l","DEL VALLE MANGO 1.2 L","Jugo Del Valle.",6000],
+  ["del-valle-mango-fresa-1-2l","DEL VALLE MANGO FRESA 1.2L","Jugo Del Valle.",6000],
+  ["del-valle-mora-1-2l","DEL VALLE MORA 1.2L","Jugo Del Valle.",6000],
+  ["coca-cola-original-2-5l","COCA-COLA ORIGINAL 2.5L","Bebida gaseosa.",9000],
+  ["sprite-original-1-5l","SPRITE SABOR ORIGINAL LIMA LIMON 1.5L","Bebida gaseosa.",7000],
+  ["quatro-original-toronja-1-5l","QUATRO SABOR ORIGINAL TORONJA 1.5L","Bebida gaseosa.",7000],
+  ["del-valle-frutas-criticas-1-5l","DEL VALLE FRUTAS CRITICAS 1.5L","Jugo Del Valle.",7000]
+];
+const V4_CONGELADAS = [
+  ["cong-carne","Empanadas congeladas de carne x12","Paquete de 12 unidades.",24000],
+  ["cong-pollo","Empanadas congeladas de pollo x12","Paquete de 12 unidades.",24000],
+  ["cong-mixta","Empanadas congeladas mixtas x12","Paquete de 12 unidades.",24000],
+  ["cong-queso","Empanadas congeladas de queso x12","Paquete de 12 unidades.",30000],
+  ["cong-barril","Empanadas congeladas de carne al barril x12","Paquete de 12 unidades.",30000],
+  ["cong-ranchera","Empanadas congeladas rancheras x12","Paquete de 12 unidades.",30000],
+  ["cong-chicharron","Empanadas congeladas de chicharrón x12","Paquete de 12 unidades.",30000]
+];
+
+function v4HoraColombia(){
+  return new Date(new Date().toLocaleString("en-US",{timeZone:"America/Bogota"}));
+}
+function v4MinutosActuales(){
+  const d=v4HoraColombia(); return d.getHours()*60+d.getMinutes();
+}
+function v4DiaCerrado(){
+  return v4HoraColombia().getDay()===0;
+}
+function v4AbiertoPunto(p){
+  if(v4DiaCerrado()) return false;
+  return v4MinutosActuales() >= V4_HORARIOS[p].inicio;
+}
+function v4DomicilioDisponible(p){
+  if(v4DiaCerrado() || !V4_PUNTOS[p].domicilios) return false;
+  const m=v4MinutosActuales();
+  return m>=15*60 && m<=22*60+30;
+}
+function v4EstadoPunto(p){
+  if(v4DiaCerrado()) return "🔴 Cerrado hoy (domingo)";
+  const h=V4_HORARIOS[p].inicio;
+  if(v4MinutosActuales()<h) return "🕒 Abre desde "+(p==="Cuba"?"2:00 PM":"3:00 PM");
+  return "🟢 Abierto";
+}
+function v4EstadoDomicilio(p){
+  if(!V4_PUNTOS[p].domicilios) return "❌ Sin servicio a domicilio";
+  if(v4DiaCerrado()) return "🔴 Domicilios cerrados hoy";
+  const m=v4MinutosActuales();
+  if(m<15*60) return "🕒 Domicilios desde las 3:00 PM";
+  if(m>22*60+30) return "🔴 Domicilios cerrados · hasta las 10:30 PM";
+  return "🟢 Domicilios disponibles · 3:00 PM a 10:30 PM";
+}
+
+function v4Producto(base, id, cat, icon, nombre, desc, precio){
+  return {id,cat,icon,nombre,desc,precio,puntos:base};
+}
+
+const V4_PRODUCTOS_EXTRA = [
+  ...V4_SALSAS.map(x=>v4Producto(["Centro","Cuba","Circunvalar"],x[0],"Salsas","🧂",x[1],x[2],x[3])),
+  ...V4_GASEOSAS.map(x=>v4Producto(["Cuba","Circunvalar"],x[0],"Gaseosas Coca-Cola","🥤",x[1],x[2],x[3])),
+  ...V4_CONGELADAS.map(x=>v4Producto(["Cuba","Circunvalar"],x[0],"Empanadas congeladas","🧊",x[1],x[2],x[3]))
+];
+const V4_BASE_PRODUCTS = [
+  {id:"mega-tradicional",cat:"Mega empanadas de 30 cm",icon:"🥟",nombre:"Mega Tradicional",desc:"Mega empanada tradicional de 30 cm.",precio:12000,puntos:["Centro","Cuba","Circunvalar"]},
+  {id:"mega-carne-desmechada",cat:"Mega empanadas de 30 cm",icon:"🥟",nombre:"Mega de Carne Desmechada",desc:"Mega empanada de 30 cm con carne desmechada.",precio:15000,puntos:["Centro","Cuba","Circunvalar"]},
+  {id:"mega-barril",cat:"Mega empanadas de 30 cm",icon:"🥟",nombre:"Mega Barril",desc:"Mega empanada de 30 cm.",precio:15000,puntos:["Centro","Cuba","Circunvalar"]},
+  {id:"mega-arroz-arecho",cat:"Mega empanadas de 30 cm",icon:"🥟",nombre:"Mega de Arroz Arecho",desc:"Mega empanada de 30 cm con arroz arecho.",precio:15000,puntos:["Centro","Cuba","Circunvalar"]},
+  {id:"emp-carne",cat:"Empanadas",icon:"🥟",nombre:"Empanada de Carne",desc:"Empanada tradicional de carne.",precio:3000,puntos:["Centro","Cuba","Circunvalar"]},
+  {id:"emp-pollo",cat:"Empanadas",icon:"🥟",nombre:"Empanada de Pollo",desc:"Empanada tradicional de pollo.",precio:3000,puntos:["Centro","Cuba","Circunvalar"]},
+  {id:"emp-queso",cat:"Empanadas",icon:"🥟",nombre:"Empanada de Queso",desc:"Empanada rellena de queso.",precio:3500,puntos:["Centro","Cuba","Circunvalar"]},
+  {id:"emp-mixta",cat:"Empanadas",icon:"🥟",nombre:"Empanada Mixta",desc:"Deliciosa combinación de carne y pollo.",precio:4000,puntos:["Centro","Cuba","Circunvalar"]},
+];
+const PRODUCTOS_V4=[...V4_BASE_PRODUCTS,...V4_PRODUCTOS_EXTRA];
+let productosPublicosV4=[...PRODUCTOS_V4];
+
+async function cargarProductosPublicos(){
+  try{
+    if(!window.supabase || !window.SUPABASE_CONFIG?.url || !window.SUPABASE_CONFIG?.anonKey) return;
+    supabasePublico ||= window.supabase.createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.anonKey);
+    const {data,error}=await supabasePublico.from("productos")
+      .select("id,categoria,icono,nombre,descripcion,precio,sucursales,activo,imagen_url")
+      .eq("activo",true)
+      .order("categoria",{ascending:true})
+      .order("nombre",{ascending:true});
+    if(error) throw error;
+    // Supabase es la fuente de verdad. El menú local solo queda como respaldo
+    // si la base no está disponible; no se mezclan listas hardcodeadas con la DB.
+    productosPublicosV4=(data||[]).map(x=>({
+      id:String(x.id),
+      cat:String(x.categoria||"Extras"),
+      icon:String(x.icono||"🍽️"),
+      imagen:String(x.imagen_url||""),
+      nombre:String(x.nombre||x.id),
+      desc:String(x.descripcion||""),
+      precio:x.precio==null?null:Number(x.precio),
+      puntos:Array.isArray(x.sucursales)?x.sucursales:[]
+    })).filter(x=>x.puntos.length>0);
+  }catch(e){
+    console.warn("No se pudieron cargar los productos desde Supabase. Se usará el menú local de respaldo.",e);
+    productosPublicosV4=[...PRODUCTOS_V4];
+  }
+}
+
+function activarRealtimePublico(){
+  if(!supabasePublico || supabasePublicoRealtimeChannel) return;
+  supabasePublicoRealtimeChannel=supabasePublico.channel("menu-publico-live")
+    .on("postgres_changes",{event:"*",schema:"public",table:"productos"},async()=>{
+      await cargarProductosPublicos();
+      renderMenu();
+      v4ActualizarUI();
+    })
+    .on("postgres_changes",{event:"*",schema:"public",table:"configuracion_domicilios"},async()=>{
+      await cargarConfiguracionDomiciliosPublica();
+      v4ActualizarUI();
+      renderMenu();
+    })
+    .on("postgres_changes",{event:"*",schema:"public",table:"configuracion_ciudades_domicilios"},async()=>{
+      await cargarConfiguracionDomiciliosPublica();
+      v4ActualizarUI();
+    })
+    .subscribe();
+}
+
+function v4SetPunto(p){
+  if(!Object.prototype.hasOwnProperty.call(V4_PUNTOS,p)) return false;
+  localStorage.setItem("sucursalEmpanadasQueRico",p);
+  localStorage.setItem("puntoSeleccionado",String(V4_PUNTOS[p].numero));
+  localStorage.setItem("sucursalSeleccionada",p);
+  window.sucursalSeleccionadaV4=p;
+  // Clear incompatible cart items when switching points.
+  carrito = carrito.filter(i=>productosPublicosV4.find(x=>x.id===i.id)?.puntos.includes(p));
+  guardarCarrito();
+  renderMenu();
+  renderCarrito();
+  v4ActualizarUI();
+  return true;
+}
+function v4GetPunto(){
+  const p=localStorage.getItem("sucursalEmpanadasQueRico")||"";
+  return Object.prototype.hasOwnProperty.call(V4_PUNTOS,p) ? p : "";
+}
+
+let categoriaMenuActiva = "all";
+
+function obtenerCategoriasMenu(lista){
+  const ordenPreferido = [
+    "Empanadas",
+    "Mega empanadas de 30 cm",
+    "Empanadas congeladas",
+    "Congeladas",
+    "Extras",
+    "Papas rellenas",
+    "Arepas",
+    "Gaseosas Coca-Cola",
+    "Salsas"
+  ];
+  const existentes = [...new Set(lista.map(x=>String(x.cat||"").trim()).filter(Boolean))];
+  return [
+    ...ordenPreferido.filter(c=>existentes.includes(c)),
+    ...existentes.filter(c=>!ordenPreferido.includes(c))
+  ];
+}
+
+function renderMenuCategoryTabs(lista){
+  const tabs=document.getElementById("menuCategoryTabs");
+  if(!tabs)return;
+  const cats=obtenerCategoriasMenu(lista);
+  if(!cats.length){tabs.innerHTML="";return;}
+  if(categoriaMenuActiva!=="all" && !cats.includes(categoriaMenuActiva)) categoriaMenuActiva="all";
+  const iconos={
+    "Mega empanadas de 30 cm":"📏",
+    "Empanadas":"🥟",
+    "Empanadas congeladas":"🧊",
+    "Congeladas":"🧊",
+    "Extras":"➕",
+    "Papas rellenas":"🥔",
+    "Arepas":"🫓",
+    "Coca-Cola":"🥤",
+    "Postobón":"🥤",
+    "Gaseosas Coca-Cola":"🥤",
+    "Salsas":"🧂"
+  };
+  tabs.innerHTML=[
+    `<button type="button" class="menu-category-tab ${categoriaMenuActiva==="all"?"active":""}" data-menu-cat="all" role="tab" aria-selected="${categoriaMenuActiva==="all"}">🍽️ Todo el menú</button>`,
+    ...cats.map(cat=>`<button type="button" class="menu-category-tab ${categoriaMenuActiva===cat?"active":""}" data-menu-cat="${escapar(cat)}" role="tab" aria-selected="${categoriaMenuActiva===cat}">${iconos[cat]||"•"} ${escapar(cat)}</button>`)
+  ].join("");
+  tabs.querySelectorAll(".menu-category-tab").forEach(btn=>btn.addEventListener("click",()=>{
+    categoriaMenuActiva=btn.dataset.menuCat||"all";
+    renderMenu();
+    const menu=document.getElementById("menu");
+    if(menu) menu.scrollIntoView({behavior:"smooth",block:"start"});
+  }));
+}
+
+function renderMenu(){
+  const cont=document.getElementById("menuContainer"); if(!cont)return;
+  const p=v4GetPunto();
+  if(!p){
+    categoriaMenuActiva="all";
+    const tabs=document.getElementById("menuCategoryTabs"); if(tabs)tabs.innerHTML="";
+    cont.innerHTML=`<div class="empty-menu"><div>📍</div><h3>Primero elige tu punto</h3><p>Selecciona una sucursal arriba para ver el menú disponible.</p><button class="primary-btn" onclick="mostrarSelectorSucursal()">Elegir sucursal</button></div>`;
+    return;
+  }
+  const lista=productosPublicosV4.filter(x=>x.puntos.includes(p));
+  renderMenuCategoryTabs(lista);
+  const listaFiltrada=categoriaMenuActiva==="all" ? lista : lista.filter(x=>x.cat===categoriaMenuActiva);
+  const grupos={}; listaFiltrada.forEach(x=>(grupos[x.cat]??=[]).push(x));
+  cont.innerHTML=Object.entries(grupos).map(([cat,arr])=>`
+    <section class="menu-category" data-category="${escapar(cat)}">
+      <div class="category-title"><h3>${escapar(cat)}</h3><span>${arr.length} opciones</span></div>
+      <div class="product-grid">${arr.map(x=>`
+        <article class="product" data-name="${escapar(x.nombre.toLowerCase())}">
+          <div class="product-image">${x.imagen?`<img src="${escapar(x.imagen)}" alt="${escapar(x.nombre)}" loading="lazy">`:x.icon}</div>
+          <div class="product-content"><h4>${escapar(x.nombre)}</h4><p>${escapar(x.desc)}</p>
+          <div class="product-bottom"><strong class="price">${x.cat === "Salsas" ? "Gratis" : (x.precio == null ? "Precio no definido" : dinero(x.precio))}${p === "Centro" ? "" : `<button class="add" onclick="agregar('${x.id}')">+ Agregar</button>`}</div>
+          </div>
+        </article>`).join("")}</div>
+    </section>`).join("") || `<div class="empty-menu"><div>🔎</div><h3>No hay productos en esta ventana</h3><p>Prueba otra categoría.</p></div>`;
+  const tituloSucursalMenu=document.getElementById("tituloSucursalMenu");
+  if(tituloSucursalMenu) tituloSucursalMenu.textContent=V4_PUNTOS[p].nombre;
+  const subtituloSucursalMenu=document.getElementById("subtituloSucursalMenu");
+  if(subtituloSucursalMenu) subtituloSucursalMenu.textContent=V4_PUNTOS[p].horario+" · "+v4EstadoDomicilio(p);
+}
+function v4ActualizarUI(){
+  const p=v4GetPunto();
+  const b=document.getElementById("sucursalActualBanner");
+  if(b) b.innerHTML=p ? (p === "Centro"
+    ? `📍 <strong>${V4_PUNTOS[p].nombre}</strong> · ${V4_PUNTOS[p].ciudad}<br><small>${V4_PUNTOS[p].direccion} · ${v4EstadoPunto(p)} · <strong>Solo menú · sin pedidos ni domicilios</strong></small><button class="link-btn" onclick="mostrarSelectorSucursal()">Cambiar punto</button>`
+    : `📍 <strong>${V4_PUNTOS[p].nombre}</strong> · ${V4_PUNTOS[p].ciudad}<br><small>${V4_PUNTOS[p].direccion} · ${v4EstadoPunto(p)} · ${v4EstadoDomicilio(p)}</small><button class="link-btn" onclick="mostrarSelectorSucursal()">Cambiar punto</button>`) : "";
+  const cartBtn=document.querySelector(".cart-button");
+  if(cartBtn) {
+    cartBtn.style.display = p === "Centro" ? "none" : "";
+    cartBtn.setAttribute("aria-hidden", p === "Centro" ? "true" : "false");
+  }
+  const heroTitle=document.querySelector(".hero h1");
+  const heroText=document.querySelector(".hero-copy > p");
+  if(heroTitle && p === "Centro") heroTitle.innerHTML="Consulta el menú.<br><span>Bombay 3</span>";
+  if(heroTitle && p !== "Centro") heroTitle.innerHTML="Elige tu punto.<br><span>Arma tu pedido.</span>";
+  if(heroText && p === "Centro") heroText.textContent="Punto 1 — Bombay 3: consulta nuestro menú. Este punto funciona únicamente como menú; no recibe pedidos ni domicilios.";
+  if(heroText && p !== "Centro") heroText.textContent="Selecciona una sucursal y disfruta el menú disponible. Puedes pedir para recoger o solicitar domicilio cuando el punto tenga ese servicio.";
+  document.querySelectorAll("[data-v4-punto]").forEach(el=>{
+    const q=el.dataset.v4Punto;
+    el.classList.toggle("selected",q===p);
+    const st=el.querySelector(".v4-status"); if(st)st.textContent=v4EstadoPunto(q);
+    const ds=el.querySelector(".v4-delivery"); if(ds)ds.textContent=v4EstadoDomicilio(q);
+  });
+  renderMenu();
+  const dom=document.querySelector('.delivery-choice[data-tipo="domicilio"]');
+  if(dom){
+    const allowed=p && V4_PUNTOS[p].domicilios && v4DomicilioDisponible(p);
+    dom.disabled=!allowed;
+    dom.classList.toggle("disabled",!allowed);
+    dom.querySelector("small").textContent=allowed?"3:00 PM a 10:30 PM":(p&&V4_PUNTOS[p].domicilios?"Disponible de 3:00 PM a 10:30 PM":"Solo puntos 2 y 3");
+  }
+}
+function mostrarSelectorSucursal(){
+  const o=document.getElementById("overlaySucursal");
+  if(!o){ console.error("No existe #overlaySucursal"); return false; }
+  // Reconstruir siempre el contenido si está vacío.
+  if(!o.querySelector(".v4-simple-options")) v4CrearSelector();
+  // .hidden usa !important; por eso se elimina antes de mostrar.
+  o.classList.remove("hidden");
+  o.style.setProperty("display","grid","important");
+  o.setAttribute("aria-hidden","false");
+  return false;
+}
+function cerrarSelectorSucursal(){
+  const o=document.getElementById("overlaySucursal");
+  if(!o)return false;
+  o.classList.add("hidden");
+  o.style.removeProperty("display");
+  o.setAttribute("aria-hidden","true");
+  return false;
+}
+function seleccionarSucursal(nombre){
+  if(!Object.prototype.hasOwnProperty.call(V4_PUNTOS,nombre)){
+    console.error("Sucursal no válida:",nombre); return false;
+  }
+  if(!v4SetPunto(nombre)) return false;
+
+  // Bombay 3 es únicamente informativo: no permite pedidos, carrito ni domicilios.
+  if(nombre === "Centro") {
+    carrito = [];
+    modalidadEntrega = null;
+    guardarCarrito();
+  }
+
+  const overlay=document.getElementById("overlaySucursal");
+  if(overlay){
+    overlay.classList.add("hidden");
+    overlay.style.removeProperty("display");
+    overlay.setAttribute("aria-hidden","true");
+  }
+
+  const recoger=document.getElementById("clienteSucursal");
+  if(recoger)recoger.value=nombre;
+
+  const domicilio=document.getElementById("clienteSucursalDomicilio");
+  if(domicilio)domicilio.value=(nombre==="Cuba"||nombre==="Circunvalar")?nombre:"";
+  return false;
+}
+// Exponer explícitamente las funciones usadas por los botones HTML.
+window.mostrarSelectorSucursal = mostrarSelectorSucursal;
+window.cerrarSelectorSucursal = cerrarSelectorSucursal;
+window.seleccionarSucursal = seleccionarSucursal;
+function seleccionarEntrega(tipo){
+  const p=v4GetPunto();
+  if(tipo==="domicilio" && (!p || !V4_PUNTOS[p].domicilios || !v4DomicilioDisponible(p))){
+    alert(p && V4_PUNTOS[p].domicilios ? "Los domicilios están disponibles de 3:00 PM a 10:30 PM, de lunes a sábado." : "El punto seleccionado no tiene servicio a domicilio.");
+    return;
+  }
+  modalidadEntrega=tipo;
+  document.getElementById("formEntrega").classList.remove("hidden");
+  document.getElementById("camposDomicilio").classList.toggle("hidden",tipo!=="domicilio");
+  document.getElementById("camposRecoger").classList.toggle("hidden",tipo!=="recoger");
+  document.getElementById("avisoCajaDomicilio").classList.toggle("hidden",tipo!=="domicilio");
+  document.getElementById("clienteCiudad").required=tipo==="domicilio";
+  document.getElementById("clienteZona").required=tipo==="domicilio";
+  document.getElementById("clienteDireccion").required=tipo==="domicilio";
+  document.getElementById("clienteSucursalDomicilio").required=tipo==="domicilio";
+  document.getElementById("clienteSucursal").required=tipo==="recoger";
+  if(tipo==="domicilio"){
+    const sel=document.getElementById("clienteSucursalDomicilio");
+    sel.value=p==="Cuba"?"Cuba":p==="Circunvalar"?"Circunvalar":"";
+  } else {
+    const sel=document.getElementById("clienteSucursal"); if(sel)sel.value=p||"";
+  }
+  document.getElementById("resumenModalidad").innerHTML=tipo==="domicilio"
+    ? `🛵 <strong>Domicilio seleccionado.</strong> ${V4_PUNTOS[p].nombre} · 3:00 PM a 10:30 PM.`
+    : `🏪 <strong>Recoger en sucursal.</strong> ${V4_PUNTOS[p]?.nombre||"Selecciona el punto"}.`;
+  renderCarrito();
+}
+function v4CrearSelector(){
+  const o=document.getElementById("overlaySucursal");
+  if(!o)return;
+
+  o.innerHTML=`<div class="v4-selector v4-selector-simple">
+    <button type="button" class="v4-simple-close" aria-label="Cerrar" onclick="cerrarSelectorSucursal()">✕</button>
+    <div class="v4-logo">🥟</div>
+    <span class="eyebrow">EMPANADAS QUE RICO</span>
+    <h1>Elige tu sucursal</h1>
+    <p>Selecciona el punto donde quieres realizar tu pedido.</p>
+
+    <div class="v4-simple-options">
+      ${Object.entries(V4_PUNTOS).map(([k,p])=>`
+        <button type="button" class="v4-simple-option" data-sucursal="${k}" onclick="seleccionarSucursal('${k}')">
+          <span class="v4-simple-number">0${p.numero}</span>
+          <span class="v4-simple-icon">📍</span>
+          <span class="v4-simple-info">
+            <strong>${p.nombre}</strong>
+            <small>${p.ciudad} · ${p.direccion}</small>
+            <small>🕒 ${p.horario}</small>
+          </span>
+          <span class="v4-simple-arrow">→</span>
+        </button>`).join("")}
+    </div>
+
+    <div class="v4-sunday">🔴 <strong>Domingo: cerrado.</strong></div>
   </div>`;
 }
-function copiarSeguimiento(){
-  const url=`${location.origin}${location.pathname}?pedido=${encodeURIComponent(pedidoActual.numero_pedido)}&token=${encodeURIComponent(pedidoActual.trackingToken)}#seguimiento`;
-  navigator.clipboard?.writeText(url).then(()=>alert("Enlace copiado.")).catch(()=>prompt("Copia este enlace:",url));
+function v4CrearPuntos(){
+  const s=document.getElementById("puntosFisicos"); if(!s)return;
+  s.innerHTML=Object.entries(V4_PUNTOS).map(([k,p])=>`
+    <article class="location-card">
+      <div class="location-top"><span>0${p.numero}</span><span>📍</span></div>
+      <h3>${p.nombre}</h3><p>${p.direccion}</p><strong>${p.ciudad}</strong>
+      <div class="location-info">🕒 ${p.horario}</div>
+      <div class="location-info">${v4EstadoDomicilio(k)}</div>
+      <a href="${p.mapa}" target="_blank" rel="noopener" class="map-button">🗺️ Ver ubicación en Google Maps</a>
+      <button class="secondary-btn full" data-sucursal="${k}" onclick="seleccionarSucursal('${k}')">Elegir este punto</button>
+    </article>`).join("");
 }
-function finalizarPedido(){
-  carrito=[]; guardarCarrito(); renderCarrito(); cerrarCheckout(); modalidadEntrega=""; pedidoActual=null;
-}
-
-async function consultarPedido(){
-  const numero=$("consultaPedido").value.trim().replace("#","");
-  if(!numero){alert("Escribe el número de pedido.");return;}
-  try{
-    const client=obtenerSupabaseClient();
-    const token=new URLSearchParams(location.search).get("token");
-    const r=token
-      ? await client.rpc("consultar_pedido_por_token",{p_token:token})
-      : await client.rpc("consultar_pedido_por_numero",{p_numero:numero});
-    if(r.error) throw r.error;
-    const row=Array.isArray(r.data)?r.data[0]:r.data;
-    if(!row){mostrarEstadoPedido(numero,"no_encontrado");return;}
-    mostrarEstadoPedido(row.numero_pedido,row.estado,row.motivo_invalido);
-  }catch(e){
-    console.error(e);
-    const local=JSON.parse(localStorage.getItem(`pedido_${numero}`)||"null");
-    mostrarEstadoPedido(numero,local?.estado||"verificacion");
+async function v4Inicial(){
+  await cargarConfiguracionDomiciliosPublica();
+  await cargarProductosPublicos();
+  activarRealtimePublico();
+  v4CrearSelector();
+  v4CrearPuntos();
+  const overlay=document.getElementById("overlaySucursal");
+  const p=v4GetPunto();
+  if(p){
+    v4ActualizarUI();
+    if(overlay) overlay.classList.add("hidden");
+  }else{
+    // Sin sucursal elegida, el selector debe quedar disponible al pulsar “Elegir sucursal”.
+    if(overlay){ overlay.classList.add("hidden"); overlay.style.display="none"; overlay.setAttribute("aria-hidden","true"); }
+    renderMenu();
   }
+  setInterval(v4ActualizarUI,30000);
 }
-function mostrarEstadoPedido(numero,estado,motivo=""){
-  const estados={
-    verificacion:["🟡","yellow","Pedido en verificación","Recibimos tu pedido y el negocio está revisando la información."],
-    validado:["🟢","green","Pedido validado","El negocio validó el pedido. Continuará con la preparación."],
-    rechazado:["🔴","red","Pedido rechazado",motivo?`Motivo: ${motivo}`:"El negocio no pudo validar el pedido."],
-    preparacion:["🍳","blue","Pedido en preparación","Tu pedido está siendo preparado."],
-    en_domicilio:["🛵","blue","Pedido en domicilio","Tu pedido salió para entrega."],
-    entregado:["✅","green","Pedido entregado","Tu pedido fue entregado correctamente."],
-    no_encontrado:["🔎","red","No encontrado","No encontramos un pedido con ese número."]
-  };
-  const e=estados[estado]||estados.verificacion;
-  $("estadoPedidoCard").innerHTML=`<div class="status-icon ${e[1]}">${e[0]}</div><span class="order-code">Pedido #${escapar(numero)}</span><h3>${e[2]}</h3><p>${escapar(e[3])}</p>`;
+document.addEventListener("DOMContentLoaded",v4Inicial);
+
+// Force domicile WhatsApp to follow the selected preparation point.
+function numeroWhatsAppParaPedido(){
+  const s=pedidoActual?.cliente?.sucursal || v4GetPunto();
+  if(s==="Cuba") return CONFIG.whatsapp.punto2;
+  if(s==="Circunvalar") return CONFIG.whatsapp.punto3;
+  if(s==="Centro") return CONFIG.whatsapp.punto1;
+  return CONFIG.whatsapp.punto2;
 }
 
-async function cargarTarifasDomicilioDesdeNube(){
-  try{
-    const c=obtenerSupabaseClient();
-    const {data,error}=await c.from("tarifas_domicilio").select("sucursal,ciudad,zona,precio,activo").eq("activo",true);
-    if(error) throw error;
-    (data||[]).forEach(r=>{
-      if(r.sucursal==="Cuba"){ CONFIG.tarifasDomicilio.Cuba[r.ciudad] ||= {}; CONFIG.tarifasDomicilio.Cuba[r.ciudad][r.zona]=Number(r.precio); }
-      else if(CONFIG.tarifasDomicilio[r.sucursal]) CONFIG.tarifasDomicilio[r.sucursal][r.zona]=Number(r.precio);
-    });
-  }catch(e){ console.warn("Tarifas locales usadas:",e.message); }
-}
 
-function renderTodo(){
-  actualizarBanner(); renderMenu(); renderPuntos(); renderCarrito();
-}
-document.addEventListener("DOMContentLoaded",async()=>{
-  await cargarProductosDesdeSupabase();
-  await cargarTarifasDomicilioDesdeNube();
-  renderTodo();
-  const p=new URLSearchParams(location.search).get("pedido");
-  if(p){$("consultaPedido").value=p;consultarPedido();}
-  setInterval(()=>{actualizarBanner();renderPuntos();},30000);
+// Selector de sucursal: respaldo por eventos para que funcione aunque el HTML se cargue dinámicamente.
+document.addEventListener("click", function(ev){
+  const trigger = ev.target.closest && ev.target.closest('[data-accion="elegir-sucursal"], .js-elegir-sucursal');
+  if(trigger){ ev.preventDefault(); mostrarSelectorSucursal(); }
+  const choice = ev.target.closest && ev.target.closest('[data-sucursal]');
+  if(choice){ ev.preventDefault(); seleccionarSucursal(choice.getAttribute("data-sucursal")); }
 });
